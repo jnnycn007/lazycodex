@@ -1,19 +1,28 @@
 import { test, expect } from "@playwright/test"
+import { SITE_CONFIG } from "../lib/site-config"
 
 test.describe("coming-soon page — content", () => {
-  test("renders the splash wordmark, tagline, status, and footer", async ({ page }) => {
+  test("renders the wordmark, hero copy, status, and footer", async ({ page }) => {
     await page.goto("/")
 
-    await expect(page.getByRole("heading", { level: 1, name: "LazyCodex" })).toBeVisible()
+    await expect(
+      page.getByRole("heading", { level: 1, name: SITE_CONFIG.wordmark }),
+    ).toBeVisible()
 
-    await expect(page.getByText("OmO in Codex", { exact: true })).toBeVisible()
-    await expect(page.getByText("CODEX FOR NO-BRAINERS", { exact: true })).toBeVisible()
-    await expect(page.getByText("Coming June 2026", { exact: false })).toBeVisible()
-    await expect(page.getByText("OpenCode", { exact: false })).toBeVisible()
+    await expect(page.getByText(SITE_CONFIG.eyebrow, { exact: true })).toBeVisible()
+    await expect(page.getByText(/June 2026/i).first()).toBeVisible()
+    await expect(page.getByText("OpenCode", { exact: false }).first()).toBeVisible()
 
-    await expect(page.getByText("You don't need to think.", { exact: true })).toBeVisible()
-    await expect(page.getByText("Just prompt with ultrawork.", { exact: true })).toBeVisible()
-    await expect(page.getByText("lazycodex.ai", { exact: true })).toBeVisible()
+    // New hero copy (replaces the old "You don't need to think." splash).
+    await expect(page.getByText(SITE_CONFIG.heroLineA, { exact: false }).first()).toBeVisible()
+    await expect(
+      page.getByText(SITE_CONFIG.heroLineB.slot, { exact: false }).first(),
+    ).toBeVisible()
+    await expect(
+      page.getByText(SITE_CONFIG.heroLineB.keyword, { exact: false }).first(),
+    ).toBeVisible()
+
+    await expect(page.getByText("lazycodex.ai", { exact: false }).first()).toBeVisible()
   })
 
   test("has a single h1 and no broken landmarks", async ({ page }) => {

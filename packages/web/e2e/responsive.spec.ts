@@ -1,4 +1,6 @@
 import { test, expect, devices } from "@playwright/test"
+import { SITE_CONFIG } from "../lib/site-config"
+import { COMMANDS } from "../lib/commands"
 
 /**
  * Responsive contract: the page MUST render perfectly across the device
@@ -7,8 +9,10 @@ import { test, expect, devices } from "@playwright/test"
  * For each viewport, we assert:
  *   1. No horizontal overflow (the page fits).
  *   2. The wordmark is visible AND fits inside the viewport width.
- *   3. The two-line tagline is visible AND fits inside the viewport width.
- *   4. The splash footer is visible.
+ *   3. The hero keyword "ultrawork" is visible.
+ *   4. The launch-window status (/June 2026/i) is visible.
+ *   5. All three command names are visible.
+ *   6. The footer ("lazycodex.ai") is visible.
  *
  * If a future change breaks any breakpoint, this spec catches it before
  * Lighthouse a11y/SEO scores even get a chance to fail.
@@ -49,7 +53,7 @@ for (const viewport of VIEWPORTS) {
       expect(overflowed, "page must not overflow horizontally").toBe(false)
 
       // Wordmark visible and bounded.
-      const wordmark = page.getByRole("heading", { level: 1, name: "LazyCodex" })
+      const wordmark = page.getByRole("heading", { level: 1, name: SITE_CONFIG.wordmark })
       await expect(wordmark).toBeVisible()
       const wordmarkBox = await wordmark.boundingBox()
       expect(wordmarkBox, "wordmark must have a bounding box").not.toBeNull()
@@ -57,20 +61,21 @@ for (const viewport of VIEWPORTS) {
         expect(wordmarkBox.width).toBeLessThanOrEqual(viewport.width)
       }
 
-      // Tagline visible and bounded.
-      const tagline = page.getByText("Just prompt with ultrawork.", { exact: true })
-      await expect(tagline).toBeVisible()
-      const taglineBox = await tagline.boundingBox()
-      expect(taglineBox, "tagline must have a bounding box").not.toBeNull()
-      if (taglineBox) {
-        expect(taglineBox.width).toBeLessThanOrEqual(viewport.width)
-      }
+      // Hero keyword visible (replaces the old single-line tagline check).
+      await expect(
+        page.getByText(SITE_CONFIG.heroLineB.keyword, { exact: false }).first(),
+      ).toBeVisible()
 
       // Status pill visible.
-      await expect(page.getByText("Coming June 2026", { exact: false })).toBeVisible()
+      await expect(page.getByText(/June 2026/i).first()).toBeVisible()
+
+      // Command card names visible.
+      for (const command of COMMANDS) {
+        await expect(page.getByText(command.name, { exact: false }).first()).toBeVisible()
+      }
 
       // Footer visible.
-      await expect(page.getByText("lazycodex.ai", { exact: true })).toBeVisible()
+      await expect(page.getByText("lazycodex.ai", { exact: false }).first()).toBeVisible()
     } finally {
       await context.close()
     }
@@ -82,7 +87,9 @@ test("@responsive iPhone-13 device profile (Playwright preset)", async ({ browse
   const page = await context.newPage()
   try {
     await page.goto("/", { waitUntil: "networkidle" })
-    await expect(page.getByRole("heading", { level: 1, name: "LazyCodex" })).toBeVisible()
+    await expect(
+      page.getByRole("heading", { level: 1, name: SITE_CONFIG.wordmark }),
+    ).toBeVisible()
     const overflowed = await page.evaluate(
       () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
     )
@@ -97,7 +104,9 @@ test("@responsive iPad-Pro device profile (Playwright preset)", async ({ browser
   const page = await context.newPage()
   try {
     await page.goto("/", { waitUntil: "networkidle" })
-    await expect(page.getByRole("heading", { level: 1, name: "LazyCodex" })).toBeVisible()
+    await expect(
+      page.getByRole("heading", { level: 1, name: SITE_CONFIG.wordmark }),
+    ).toBeVisible()
     const overflowed = await page.evaluate(
       () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
     )

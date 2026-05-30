@@ -72,6 +72,12 @@ test.describe("coming-soon page — SEO + metadata", () => {
     expect(sitemap.status()).toBe(200)
     const sitemapText = await sitemap.text()
     expect(sitemapText).toMatch(/<loc>https:\/\/lazycodex\.ai\/<\/loc>/i)
+    expect(sitemapText).toMatch(/<loc>https:\/\/lazycodex\.ai\/docs<\/loc>/i)
+  })
+
+  test("/docs route is reachable", async ({ request }) => {
+    const docs = await request.get("/docs")
+    expect(docs.status()).toBe(200)
   })
 
   test("/manifest.webmanifest is reachable and valid", async ({ request }) => {
