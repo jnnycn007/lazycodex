@@ -1,8 +1,30 @@
 import type { Metadata, Viewport } from "next"
 import type { JSX, ReactNode } from "react"
-import { GeistSans } from "geist/font/sans"
-import { GeistMono } from "geist/font/mono"
+import localFont from "next/font/local"
 import "./globals.css"
+
+/**
+ * Geist loaded locally with `display: "optional"`. The LCP wordmark must NOT
+ * wait for a webfont swap: with "optional" the metric-matched fallback paints
+ * at FCP and is never swapped late, so LCP == FCP even on a throttled
+ * connection. `adjustFontFallback` keeps CLS at 0.
+ */
+const GeistSans = localFont({
+  src: "./fonts/Geist-Variable.woff2",
+  variable: "--font-geist-sans",
+  weight: "100 900",
+  display: "optional",
+  preload: true,
+  adjustFontFallback: "Arial",
+})
+
+const GeistMono = localFont({
+  src: "./fonts/GeistMono-Variable.woff2",
+  variable: "--font-geist-mono",
+  weight: "100 900",
+  display: "optional",
+  preload: true,
+})
 
 const SITE_URL = "https://lazycodex.ai"
 const SITE_NAME = "LazyCodex"

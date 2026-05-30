@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./styles/landing.css";
 
 @theme {
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
@@ -17,6 +18,12 @@
     --text-tertiary: #b9bce6;
     --text-muted: rgba(255, 255, 255, 0.72);
     --text-soft: #e8e8ff;
+    --accent-cyan: #87F0F2;
+    --accent-teal: #008385;
+    --accent-mint: #B3FEFF;
+    --accent-glow: #ABF5F7;
+    --surface-night: #0A0A0A;
+    --surface-panel: #0E1115;
   }
 
   html {
@@ -50,27 +57,6 @@
 }
 
 @layer utilities {
-  .splash-reveal {
-    opacity: 0;
-    transform: translate3d(0, 8px, 0);
-    animation: splash-reveal 720ms cubic-bezier(0.16, 1, 0.3, 1) 80ms forwards;
-  }
-
-  @keyframes splash-reveal {
-    to {
-      opacity: 1;
-      transform: translate3d(0, 0, 0);
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .splash-reveal {
-      animation: none;
-      opacity: 1;
-      transform: none;
-    }
-  }
-
   .card-gradient-base {
     background: radial-gradient(120% 100% at 60% 65%, #5a5fef 0%, #4a4fe0 35%, #3236c4 70%, #232897 100%);
   }

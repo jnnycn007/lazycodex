@@ -1,14 +1,18 @@
 import type { MetadataRoute } from "next"
 
-const SITE_URL = "https://lazycodex.ai"
-
 export default function sitemap(): MetadataRoute.Sitemap {
   return [
     {
-      url: `${SITE_URL}/`,
+      url: "https://lazycodex.ai/",
       lastModified: new Date(),
       changeFrequency: "weekly",
       priority: 1,
+    },
+    {
+      url: "https://lazycodex.ai/docs",
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.8,
     },
   ]
 }

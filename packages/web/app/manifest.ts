@@ -4,24 +4,16 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "LazyCodex",
     short_name: "LazyCodex",
-    description:
-      "LazyCodex — Codex for lazy people. One command bootstraps your full omo agent stack. Coming June 2026.",
+    description: "Codex for no-brainers. Just prompt with ultrawork.",
     start_url: "/",
     display: "standalone",
-    background_color: "#0a0b2f",
-    theme_color: "#0a0b2f",
+    background_color: "#14154d",
+    theme_color: "#2a2dbf",
     icons: [
       {
-        src: "/icon.svg",
-        sizes: "any",
-        type: "image/svg+xml",
-        purpose: "any",
-      },
-      {
-        src: "/apple-icon",
-        sizes: "180x180",
+        src: "/icon.png",
+        sizes: "512x512",
         type: "image/png",
-        purpose: "any",
       },
     ],
   }
