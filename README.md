@@ -1,7 +1,7 @@
 <div align="center">
-  <img src=".github/assets/lazycodex-logo.png" alt="LazyCodex AI" width="280">
+  <img src=".github/assets/lazycodex-logo.png" alt="LazyCodex" width="280">
 
-  <h1>LazyCodex AI</h1>
+  <h1>LazyCodex</h1>
 
   <p><strong>Codex for no-brainers.</strong><br />
   You don't need to think. Just prompt with <code>ultrawork</code>.</p>
@@ -43,7 +43,7 @@ bunx lazycodex-ai install --no-tui --codex-autonomous
 
 ## ⚡ Commands
 
-LazyCodex AI adds three workflow commands to your OpenCode session:
+LazyCodex adds three workflow commands to your OpenCode session:
 
 | Command | Syntax | What it does |
 | --- | --- | --- |
@@ -57,13 +57,13 @@ Full documentation lives at [lazycodex.ai/docs](https://lazycodex.ai/docs).
 
 ## 💤 What is this?
 
-**LazyCodex AI** is the **lazy way** to get [OmO (oh-my-openagent)](https://github.com/code-yeongyu/oh-my-openagent) up and running.
+**LazyCodex** is the **lazy way** to get [OmO (oh-my-openagent)](https://github.com/code-yeongyu/oh-my-openagent) up and running.
 
 Think [LazyVim](https://github.com/LazyVim/LazyVim) for [lazy.nvim](https://github.com/folke/lazy.nvim), but for Codex.
 
-OmO is the best agent harness: discipline agents, parallel orchestration, multi-model routing, skills, hooks, and more. LazyCodex AI wraps it so you don't have to think about setup.
+OmO is the best agent harness: discipline agents, parallel orchestration, multi-model routing, skills, hooks, and more. LazyCodex wraps it so you don't have to think about setup.
 
-> _"LazyVim made Neovim usable for the rest of us. LazyCodex AI does the same for Codex."_
+> _"LazyVim made Neovim usable for the rest of us. LazyCodex does the same for Codex."_
 
 ## 🧩 What you get
 
@@ -78,7 +78,7 @@ OmO is the best agent harness: discipline agents, parallel orchestration, multi-
 
 ## 🏗️ Architecture
 
-LazyCodex AI is a thin distribution layer. The core engine is [oh-my-openagent (OmO)](https://github.com/code-yeongyu/oh-my-openagent), included as a submodule under `src/`.
+LazyCodex is a thin distribution layer. The core engine is [oh-my-openagent (OmO)](https://github.com/code-yeongyu/oh-my-openagent), included as a submodule under `src/`.
 
 ```
 lazycodex/
@@ -91,11 +91,11 @@ lazycodex/
 └── ...
 ```
 
-LazyCodex AI is part of the [omo.dev](https://omo.dev) project. **omo in Codex**, packaged for the lazy.
+LazyCodex is part of the [omo.dev](https://omo.dev) project. **omo in Codex**, packaged for the lazy.
 
 ## 👷 Maintainer
 
-LazyCodex AI is maintained by **Jobdori**, the AI assistant that builds and ships [OmO](https://github.com/code-yeongyu/oh-my-openagent) in real-time.
+LazyCodex is maintained by **Jobdori**, the AI assistant that builds and ships [OmO](https://github.com/code-yeongyu/oh-my-openagent) in real-time.
 
 <div align="center">
 

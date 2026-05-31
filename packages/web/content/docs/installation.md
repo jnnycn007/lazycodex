@@ -1,4 +1,4 @@
-One command gets you running. LazyCodex AI is currently available on OpenCode; the Codex edition is coming June 2026.
+One command gets you running. LazyCodex is currently available on OpenCode; the Codex edition is coming June 2026.
 
 ### Install
 

@@ -4,10 +4,10 @@ import "./globals.css"
 
 
 const SITE_URL = "https://lazycodex.ai"
-const SITE_NAME = "LazyCodex AI"
+const SITE_NAME = "LazyCodex"
 const TAGLINE = "Codex for no-brainers"
 const DESCRIPTION =
-  "LazyCodex AI. You don't need to think. Just prompt with ultrawork. Coming June 2026. Currently on OpenCode."
+  "LazyCodex. You don't need to think. Just prompt with ultrawork. Coming June 2026. Currently on OpenCode."
 
 export const viewport: Viewport = {
   width: "device-width",

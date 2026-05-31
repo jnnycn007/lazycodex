@@ -1,4 +1,4 @@
-# LazyCodex AI Design System
+# LazyCodex Design System
 
 ## 1. Core Philosophy
 - **Codex-tone Luminous Backdrop**: The page uses a dark navy canvas (`#14154d`) with a centered, glowing card.

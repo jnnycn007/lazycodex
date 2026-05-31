@@ -9,7 +9,7 @@ export const SITE_CONFIG = {
   siteUrl: "https://lazycodex.ai",
   docsPath: "/docs",
   eyebrow: "CODEX FOR NO-BRAINERS",
-  wordmark: "LazyCodex AI",
+  wordmark: "LazyCodex",
   heroLineA: "You don't need to ultrathink.",
   heroLineB: {
     prefix: "Just prompt ",
