@@ -25,7 +25,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/code-yeongyu/lazycodex.git"
+    "url": "https://github.com/code-yeongyu/lazycodex"
   },
   "bugs": {
     "url": "https://github.com/code-yeongyu/lazycodex/issues"
