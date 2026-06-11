@@ -52,6 +52,27 @@ This is shorthand for `npx --yes --package oh-my-openagent omo install --platfor
 npx lazycodex-ai install --no-tui --codex-autonomous
 ```
 
+### Verify it worked
+
+```bash
+npx lazycodex-ai doctor
+```
+
+`doctor` prints the installation health report: plugin cache, hooks, MCP
+servers, agents, and config state. Inside Codex, type `$` in the composer to
+browse every installed skill — `init-deep`, `ulw-loop`, `ulw-plan`,
+`start-work`, and the rest — and hooks announce themselves with
+`LazyCodex(<version>): ...` status messages during a session.
+
+### Uninstall
+
+```bash
+npx lazycodex-ai uninstall
+```
+
+Removes the installed plugin cache, bin links, agent roles, and the managed
+sections of `~/.codex/config.toml`.
+
 ## ⚡ Commands
 
 LazyCodex installs these as OmO commands for Codex. Invoke them with the
@@ -71,11 +92,12 @@ LazyCodex should be judged by the features it actually installs. It is the
 Codex distribution for OmO's agent harness: project memory, planning,
 execution, verified completion, skills, hooks, model routing, and diagnostics.
 
-### 1. `/init-deep` creates project memory
+### 1. `$init-deep` creates project memory
 
-`/init-deep` generates hierarchical `AGENTS.md` context. It scores complex
+`$init-deep` generates hierarchical `AGENTS.md` context. It scores complex
 directories, writes local guidance near the code that needs it, and gives future
-agents landmarks before they edit.
+agents landmarks before they edit. Type `$init-deep` in the Codex composer —
+the `$` prefix is how every installed skill is invoked.
 
 Use it when the repository is too large to explain from memory. Run it again
 when the shape of the codebase changes.
@@ -98,7 +120,7 @@ actual work:
 
 | Feature | Use it for |
 | --- | --- |
-| `/init-deep` | Hierarchical project memory through `AGENTS.md` |
+| `$init-deep` | Hierarchical project memory through `AGENTS.md` |
 | `$ulw-plan` | Decision-complete planning before code changes |
 | `$start-work` | Durable plan execution with Boulder progress |
 | `$ulw-loop` | Verified completion for open-ended tasks |
@@ -110,6 +132,22 @@ actual work:
 | `AST-grep` | Structural search and rewrite across code |
 | `rules` | Project instructions from AGENTS, rules, and instruction files |
 | `comment-checker` | Feedback after edit-like operations |
+
+### 4. Sub-agent roles ride Codex's native multi-agent tools
+
+LazyCodex installs selectable agent roles into `~/.codex/agents/`: `explorer`,
+`librarian`, `plan`, `momus`, `metis`, and `codex-ultrawork-reviewer`. Pick one
+by passing `agent_type` to Codex's `spawn_agent` tool — the child agent runs
+with that role's model and instructions:
+
+```jsonc
+spawn_agent({"message": "TASK: map the auth flow end to end.", "agent_type": "explorer"})
+```
+
+The installer exposes `agent_type` on `multi_agent_v2` sessions (Codex hides it
+by default). If your Codex build's spawn tool has no `agent_type` parameter,
+describe the role inside `message` instead — the skills are written to fall
+back to that form automatically.
 
 Start at [https://lazycodex.ai](https://lazycodex.ai).
 
