@@ -90,34 +90,10 @@ jobs:
           echo "$loc" | grep -qE '^https://lazycodex\.ai/?$'
           echo "::endgroup::"
 
-      - name: PageSpeed Insights — Lighthouse 100/100/100/100 (live URL)
-        continue-on-error: true # PSI shared quota throttles on frequent CI runs; Playwright Lighthouse in web-ci.yml is the gating check.
-        run: |
-          set -euo pipefail
-          # Google PageSpeed Insights audits the live URL from Google's servers
-          # — the canonical Lighthouse measurement (immune to any local/CI
-          # rendering quirks). No API key needed for occasional invocations,
-          # but shared quota gets hit on frequent CI; non-blocking here.
-          for strategy in mobile desktop; do
-            echo "::group::PSI ${strategy}"
-            json=$(curl -sfG \
-              --data-urlencode "url=https://lazycodex.ai/" \
-              --data-urlencode "strategy=${strategy}" \
-              --data-urlencode "category=performance" \
-              --data-urlencode "category=accessibility" \
-              --data-urlencode "category=best-practices" \
-              --data-urlencode "category=seo" \
-              "https://www.googleapis.com/pagespeedonline/v5/runPagespeed")
-            python3 - <<PY
-          import json, sys
-          d = json.loads(r'''$json''')
-          cats = d['lighthouseResult']['categories']
-          scores = {k: round((cats[k]['score'] or 0) * 100) for k in ('performance','accessibility','best-practices','seo')}
-          print('strategy=${strategy}', scores)
-          fails = {k: v for k, v in scores.items() if v < 100}
-          if fails:
-            print('FAIL: scores below 100:', fails)
-            sys.exit(1)
-          PY
-            echo "::endgroup::"
-          done
+      - name: Install Google Chrome stable
+        uses: browser-actions/setup-chrome@v2
+        with:
+          chrome-version: stable
+
+      - name: Live Lighthouse audits (real Chrome)
+        run: pnpm run test:lighthouse:live

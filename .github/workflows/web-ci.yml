@@ -74,15 +74,9 @@ jobs:
           CI: "true"
           NODE_OPTIONS: "--no-deprecation"
 
-      - name: Lighthouse audits (non-blocking)
-        # Playwright-Chromium-CDP-Lighthouse hits NO_FCP intermittently in headless
-        # environments (both Ubuntu CI and macOS local). Live URL scoring is
-        # gated by PageSpeed Insights in web-deploy.yml. Reports still upload
-        # for inspection.
-        continue-on-error: true
+      - name: Lighthouse audits (real Chrome)
         run: pnpm exec playwright test --grep "@lighthouse"
         env:
-          CI: "true"
           NODE_OPTIONS: "--no-deprecation"
 
       - name: Upload Lighthouse reports
