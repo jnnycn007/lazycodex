@@ -1,0 +1,225 @@
+{
+  "generatedAt": "2026-06-24T05:40:35.854Z",
+  "control": {
+    "label": "control",
+    "baseUrl": "http://127.0.0.1:3213",
+    "captures": [
+      {
+        "route": "/",
+        "viewport": {
+          "id": "mobile",
+          "width": 390,
+          "height": 844
+        },
+        "screenshotPath": ".omo/ulw-loop/evidence/design-system-fidelity-v2/screenshots/control/landing-mobile-390x844.png",
+        "overflow": {
+          "scrollWidth": 390,
+          "clientWidth": 390,
+          "overflowX": 0
+        }
+      },
+      {
+        "route": "/docs",
+        "viewport": {
+          "id": "mobile",
+          "width": 390,
+          "height": 844
+        },
+        "screenshotPath": ".omo/ulw-loop/evidence/design-system-fidelity-v2/screenshots/control/docs-mobile-390x844.png",
+        "overflow": {
+          "scrollWidth": 390,
+          "clientWidth": 390,
+          "overflowX": 0
+        }
+      },
+      {
+        "route": "/",
+        "viewport": {
+          "id": "tablet",
+          "width": 768,
+          "height": 1024
+        },
+        "screenshotPath": ".omo/ulw-loop/evidence/design-system-fidelity-v2/screenshots/control/landing-tablet-768x1024.png",
+        "overflow": {
+          "scrollWidth": 768,
+          "clientWidth": 768,
+          "overflowX": 0
+        }
+      },
+      {
+        "route": "/docs",
+        "viewport": {
+          "id": "tablet",
+          "width": 768,
+          "height": 1024
+        },
+        "screenshotPath": ".omo/ulw-loop/evidence/design-system-fidelity-v2/screenshots/control/docs-tablet-768x1024.png",
+        "overflow": {
+          "scrollWidth": 768,
+          "clientWidth": 768,
+          "overflowX": 0
+        }
+      },
+      {
+        "route": "/",
+        "viewport": {
+          "id": "desktop",
+          "width": 1280,
+          "height": 800
+        },
+        "screenshotPath": ".omo/ulw-loop/evidence/design-system-fidelity-v2/screenshots/control/landing-desktop-1280x800.png",
+        "overflow": {
+          "scrollWidth": 1280,
+          "clientWidth": 1280,
+          "overflowX": 0
+        }
+      },
+      {
+        "route": "/docs",
+        "viewport": {
+          "id": "desktop",
+          "width": 1280,
+          "height": 800
+        },
+        "screenshotPath": ".omo/ulw-loop/evidence/design-system-fidelity-v2/screenshots/control/docs-desktop-1280x800.png",
+        "overflow": {
+          "scrollWidth": 1280,
+          "clientWidth": 1280,
+          "overflowX": 0
+        }
+      }
+    ],
+    "events": {
+      "console": [],
+      "pageErrors": []
+    }
+  },
+  "current": {
+    "label": "current",
+    "baseUrl": "http://127.0.0.1:3212",
+    "captures": [
+      {
+        "route": "/",
+        "viewport": {
+          "id": "mobile",
+          "width": 390,
+          "height": 844
+        },
+        "screenshotPath": ".omo/ulw-loop/evidence/design-system-fidelity-v2/screenshots/current/landing-mobile-390x844.png",
+        "overflow": {
+          "scrollWidth": 390,
+          "clientWidth": 390,
+          "overflowX": 0
+        }
+      },
+      {
+        "route": "/docs",
+        "viewport": {
+          "id": "mobile",
+          "width": 390,
+          "height": 844
+        },
+        "screenshotPath": ".omo/ulw-loop/evidence/design-system-fidelity-v2/screenshots/current/docs-mobile-390x844.png",
+        "overflow": {
+          "scrollWidth": 390,
+          "clientWidth": 390,
+          "overflowX": 0
+        }
+      },
+      {
+        "route": "/",
+        "viewport": {
+          "id": "tablet",
+          "width": 768,
+          "height": 1024
+        },
+        "screenshotPath": ".omo/ulw-loop/evidence/design-system-fidelity-v2/screenshots/current/landing-tablet-768x1024.png",
+        "overflow": {
+          "scrollWidth": 768,
+          "clientWidth": 768,
+          "overflowX": 0
+        }
+      },
+      {
+        "route": "/docs",
+        "viewport": {
+          "id": "tablet",
+          "width": 768,
+          "height": 1024
+        },
+        "screenshotPath": ".omo/ulw-loop/evidence/design-system-fidelity-v2/screenshots/current/docs-tablet-768x1024.png",
+        "overflow": {
+          "scrollWidth": 768,
+          "clientWidth": 768,
+          "overflowX": 0
+        }
+      },
+      {
+        "route": "/",
+        "viewport": {
+          "id": "desktop",
+          "width": 1280,
+          "height": 800
+        },
+        "screenshotPath": ".omo/ulw-loop/evidence/design-system-fidelity-v2/screenshots/current/landing-desktop-1280x800.png",
+        "overflow": {
+          "scrollWidth": 1280,
+          "clientWidth": 1280,
+          "overflowX": 0
+        }
+      },
+      {
+        "route": "/docs",
+        "viewport": {
+          "id": "desktop",
+          "width": 1280,
+          "height": 800
+        },
+        "screenshotPath": ".omo/ulw-loop/evidence/design-system-fidelity-v2/screenshots/current/docs-desktop-1280x800.png",
+        "overflow": {
+          "scrollWidth": 1280,
+          "clientWidth": 1280,
+          "overflowX": 0
+        }
+      }
+    ],
+    "events": {
+      "console": [],
+      "pageErrors": []
+    }
+  },
+  "interactions": {
+    "checks": [
+      {
+        "id": "copy-install-command",
+        "passed": true
+      },
+      {
+        "id": "landing-docs-navigation",
+        "passed": true
+      },
+      {
+        "id": "docs-mobile-menu-opens",
+        "passed": true
+      },
+      {
+        "id": "docs-command-k-focuses-search",
+        "passed": true
+      },
+      {
+        "id": "docs-search-filters-skills",
+        "passed": true
+      },
+      {
+        "id": "docs-hash-navigation",
+        "passed": true
+      }
+    ],
+    "events": {
+      "console": [],
+      "pageErrors": []
+    }
+  },
+  "allChecksPassed": true,
+  "cleanup": "closed Playwright Chrome contexts and browser"
+}

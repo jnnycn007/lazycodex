@@ -1,0 +1,19 @@
+{
+  "command": "image-diff",
+  "dimensionsMatch": true,
+  "reference": {
+    "width": 768,
+    "height": 43887
+  },
+  "actual": {
+    "width": 768,
+    "height": 43887
+  },
+  "totalPixels": 33705216,
+  "diffPixels": 0,
+  "diffRatio": 0,
+  "similarityScore": 100,
+  "alphaChannelIntact": true,
+  "hotspots": [],
+  "summary": "100/100 similarity; 0/33705216 pixels differ."
+}

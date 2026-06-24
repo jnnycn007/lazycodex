@@ -1,0 +1,56 @@
+[
+  {
+    "file": "docs-desktop-1280x800.json",
+    "dimensionsMatch": true,
+    "diffPixels": 0,
+    "diffRatio": 0,
+    "similarityScore": 100,
+    "alphaChannelIntact": true,
+    "hotspots": 0
+  },
+  {
+    "file": "docs-mobile-390x844.json",
+    "dimensionsMatch": true,
+    "diffPixels": 0,
+    "diffRatio": 0,
+    "similarityScore": 100,
+    "alphaChannelIntact": true,
+    "hotspots": 0
+  },
+  {
+    "file": "docs-tablet-768x1024.json",
+    "dimensionsMatch": true,
+    "diffPixels": 0,
+    "diffRatio": 0,
+    "similarityScore": 100,
+    "alphaChannelIntact": true,
+    "hotspots": 0
+  },
+  {
+    "file": "landing-desktop-1280x800.json",
+    "dimensionsMatch": true,
+    "diffPixels": 0,
+    "diffRatio": 0,
+    "similarityScore": 100,
+    "alphaChannelIntact": true,
+    "hotspots": 0
+  },
+  {
+    "file": "landing-mobile-390x844.json",
+    "dimensionsMatch": true,
+    "diffPixels": 0,
+    "diffRatio": 0,
+    "similarityScore": 100,
+    "alphaChannelIntact": true,
+    "hotspots": 0
+  },
+  {
+    "file": "landing-tablet-768x1024.json",
+    "dimensionsMatch": true,
+    "diffPixels": 0,
+    "diffRatio": 0,
+    "similarityScore": 100,
+    "alphaChannelIntact": true,
+    "hotspots": 0
+  }
+]
