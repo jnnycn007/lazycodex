@@ -17,8 +17,49 @@ const agentSchemaKeys = new Set([
 
 const lazycodexAgentInvariants = new Map([
 	[
+		"explorer.toml",
+		{
+			model: "gpt-5.6-terra",
+			effort: "medium",
+			includes: [/Read-only/, /working tree/, /rg/],
+		},
+	],
+	[
+		"librarian.toml",
+		{
+			model: "gpt-5.6-terra",
+			effort: "medium",
+			includes: [/Read-only/, /SHA-pinned GitHub permalink/, /external/],
+		},
+	],
+	[
+		"metis.toml",
+		{
+			model: "gpt-5.6-sol",
+			effort: "high",
+			includes: [/pre-planning analyst/i, /contradictions/, /Read-only/],
+		},
+	],
+	[
+		"momus.toml",
+		{
+			model: "gpt-5.6-sol",
+			effort: "ultra",
+			includes: [/plan reviewer/i, /OKAY, ITERATE, or REJECT/, /Read-only/],
+		},
+	],
+	[
+		"plan.toml",
+		{
+			model: "gpt-5.6-sol",
+			effort: "xhigh",
+			includes: [/strategic planning consultant/i, /\.omo\/plans\/<slug>\.md/, /never implements/i],
+		},
+	],
+	[
 		"lazycodex-executor.toml",
 		{
+			model: "gpt-5.6-sol",
 			effort: "high",
 			includes: [/EVIDENCE_RECORDED: <path>/, /scenario/i, /artifact/i],
 		},
@@ -26,6 +67,7 @@ const lazycodexAgentInvariants = new Map([
 	[
 		"lazycodex-clone-fidelity-reviewer.toml",
 		{
+			model: "gpt-5.6-sol",
 			effort: "xhigh",
 			includes: [/recommendation/, /blockers/, /\.omo\/evidence\/<goal>-clone-fidelity\.md/],
 		},
@@ -33,6 +75,7 @@ const lazycodexAgentInvariants = new Map([
 	[
 		"lazycodex-code-reviewer.toml",
 		{
+			model: "gpt-5.6-sol",
 			effort: "xhigh",
 			includes: [/codeQualityStatus/, /recommendation/, /\.omo\/evidence\/<goal>-code-review\.md/],
 		},
@@ -40,6 +83,7 @@ const lazycodexAgentInvariants = new Map([
 	[
 		"lazycodex-qa-executor.toml",
 		{
+			model: "gpt-5.6-terra",
 			effort: "medium",
 			includes: [/not_applicable/, /surfaceEvidence/, /adversarialCases/],
 		},
@@ -47,6 +91,7 @@ const lazycodexAgentInvariants = new Map([
 	[
 		"lazycodex-gate-reviewer.toml",
 		{
+			model: "gpt-5.6-sol",
 			effort: "xhigh",
 			includes: [/APPROVE\/REJECT/, /blockers/, /\.omo\/evidence\/<goal>-gate-review\.md/],
 		},
@@ -109,7 +154,8 @@ test("#given lazycodex agent prompts #when inspected #then each role pins model 
 	for (const [fileName, invariant] of lazycodexAgentInvariants) {
 		const prompt = await readFile(join(agentsDir, fileName), "utf8");
 
-		assert.match(prompt, /^model\s*=\s*"gpt-5\.5"$/m);
+		const escapedModel = invariant.model.replace(/\./g, "\\.");
+		assert.match(prompt, new RegExp(`^model\\s*=\\s*"${escapedModel}"$`, "m"));
 		assert.match(prompt, new RegExp(`^model_reasoning_effort\\s*=\\s*"${invariant.effort}"$`, "m"));
 		assert.doesNotMatch(prompt, /^tools\s*=/m);
 		assert.doesNotMatch(prompt, /^blocking\s*=/m);

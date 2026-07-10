@@ -2710,6 +2710,11 @@ function isDirectory(path) {
 
 // ../../rules-engine/src/engine/finder.ts
 var WINDOWS_GIT_BASH_BUNDLED_RULE_PATH = "bundled-rules/windows-git-bash.md";
+var HEPHAESTUS_BUNDLED_RULE_PREFIX = "bundled-rules/hephaestus/";
+var HEPHAESTUS_DEFAULT_VARIANT_FILE = "gpt-5.5.md";
+var HEPHAESTUS_MODEL_VARIANT_FILES = [
+  ["gpt-5.6", "gpt-5.6.md"]
+];
 function findRuleCandidates(options) {
   const skipUserHome = options.skipUserHome ?? false;
   const disabledSources = options.disabledSources ?? new Set;
@@ -2722,7 +2727,8 @@ function findRuleCandidates(options) {
     disabledSources,
     ...options.cache === undefined ? {} : { cache: options.cache },
     ...options.pluginRoot === undefined ? {} : { pluginRoot: options.pluginRoot },
-    ...options.platform === undefined ? {} : { platform: options.platform }
+    ...options.platform === undefined ? {} : { platform: options.platform },
+    ...options.model === undefined ? {} : { model: options.model }
   };
   candidates.push(...findPluginBundledCandidates(pluginBundledOptions));
   if (!skipUserHome) {
@@ -2748,14 +2754,25 @@ function findPluginBundledCandidates(options = {}) {
       isSingleFile: false,
       relativePath: toRelativePath(pluginRoot, scannedFile.path)
     };
-    if (isPluginBundledCandidateEnabled(candidate, platform)) {
+    if (isPluginBundledCandidateEnabled(candidate, platform, options.model)) {
       candidates.push(candidate);
     }
   }
   return candidates;
 }
-function isPluginBundledCandidateEnabled(candidate, platform) {
-  return candidate.relativePath !== WINDOWS_GIT_BASH_BUNDLED_RULE_PATH || platform === "win32";
+function isPluginBundledCandidateEnabled(candidate, platform, model) {
+  if (candidate.relativePath === WINDOWS_GIT_BASH_BUNDLED_RULE_PATH) {
+    return platform === "win32";
+  }
+  if (candidate.relativePath.startsWith(HEPHAESTUS_BUNDLED_RULE_PREFIX)) {
+    return candidate.relativePath === `${HEPHAESTUS_BUNDLED_RULE_PREFIX}${hephaestusVariantFileForModel(model)}`;
+  }
+  return true;
+}
+function hephaestusVariantFileForModel(model) {
+  const normalizedModel = (model ?? "").toLowerCase();
+  const matched = HEPHAESTUS_MODEL_VARIANT_FILES.find(([family]) => normalizedModel.includes(family));
+  return matched === undefined ? HEPHAESTUS_DEFAULT_VARIANT_FILE : matched[1];
 }
 function findProjectCandidates(projectRoot, targetFile, disabledSources, cache) {
   const rootDirectory = resolve6(projectRoot);
@@ -2939,14 +2956,17 @@ function isDedupedRootSingleFile(candidate, rootSingleFileSelected) {
   return rootSingleFileSelected && isRootSingleFile(candidate);
 }
 // ../../rules-engine/src/engine/truncator.ts
+var NEVER_TRUNCATED_RULE_PATHS = new Set([
+  "bundled-rules/hephaestus.md",
+  "bundled-rules/hephaestus/gpt-5.5.md",
+  "bundled-rules/hephaestus/gpt-5.6.md"
+]);
 function truncationNotice(relativePath) {
   return TRUNCATION_NOTICE.replace("{path}", relativePath);
 }
 function isNeverTruncatedRule(relativePath) {
-  const normalized = relativePath.replace(/\\/g, "/");
-  const segments = normalized.split("/").filter((segment) => segment.length > 0);
-  const filename = segments.at(-1) ?? normalized;
-  return filename.toLowerCase() === "hephaestus.md";
+  const normalized = relativePath.replace(/\\/g, "/").toLowerCase();
+  return NEVER_TRUNCATED_RULE_PATHS.has(normalized);
 }
 function safeSliceEnd(body, end) {
   if (end <= 0) {
@@ -3069,12 +3089,7 @@ function orderStaticRules(rules) {
   return [...hephaestusRules, ...otherRules];
 }
 function isHephaestusRule(rule) {
-  return displayFilename(rule).toLowerCase() === "hephaestus.md";
-}
-function displayFilename(rule) {
-  const normalizedPath = rule.relativePath.length > 0 ? rule.relativePath : rule.path;
-  const segments = normalizedPath.replace(/\\/g, "/").split("/").filter((segment) => segment.length > 0);
-  return segments.at(-1) ?? normalizedPath;
+  return isNeverTruncatedRule(rule.relativePath.length > 0 ? rule.relativePath : rule.path);
 }
 function uniqueRulesByBody(rules) {
   const uniqueRules = [];
@@ -3403,7 +3418,7 @@ function uniqueStrings2(values) {
 }
 
 // components/rules/src/dynamic-target-fingerprints.ts
-function fingerprintDynamicTargets(cwd, targetPaths, config) {
+function fingerprintDynamicTargets(cwd, targetPaths, config, model) {
   const disabledSources = disabledSourcesFromConfig(config);
   const discoveryCache = createRuleDiscoveryCache();
   const cwdProjectRoot = findProjectRoot(cwd);
@@ -3418,6 +3433,9 @@ function fingerprintDynamicTargets(cwd, targetPaths, config) {
     if (disabledSources !== undefined) {
       findOptions.disabledSources = disabledSources;
     }
+    if (model !== undefined) {
+      findOptions.model = model;
+    }
     const candidates = findRuleCandidates(findOptions);
     const candidateFingerprint = sortCandidates(candidates).map(fingerprintCandidate).join("\x01");
     const cacheKey = dynamicTargetCacheKey(targetPath);
@@ -3427,6 +3445,7 @@ function fingerprintDynamicTargets(cwd, targetPaths, config) {
       fingerprint: hashContent([
         "v1",
         config.enabledSources === "auto" ? "auto" : config.enabledSources.join(","),
+        model ?? "",
         projectRoot ?? "",
         cacheKey,
         candidateFingerprint
@@ -3910,11 +3929,11 @@ import { readFileSync as readFileSync4 } from "node:fs";
 import { dirname as dirname7 } from "node:path";
 import { fileURLToPath as fileURLToPath2 } from "node:url";
 var componentRoot = dirname7(dirname7(fileURLToPath2(import.meta.url)));
-function createRulesEngine(options, config = configFromEnvironment(options.env)) {
+function createRulesEngine(options, config = configFromEnvironment(options.env), model) {
   const platform = options.platform ?? process.platform;
   const pluginRoot = options.env?.["PLUGIN_ROOT"] ?? process.env["PLUGIN_ROOT"] ?? componentRoot;
   return createEngine(config, {
-    findCandidates: (finderOptions) => findRuleCandidates({ ...finderOptions, platform, pluginRoot }),
+    findCandidates: (finderOptions) => findRuleCandidates({ ...finderOptions, platform, pluginRoot, ...model === undefined ? {} : { model } }),
     findProjectRoot,
     readFile: (path) => {
       try {
@@ -3989,8 +4008,8 @@ function filterRulesNotInTranscriptText(rules, transcriptText, markInjected) {
 }
 function isRuleAlreadyInTranscript(rule, transcriptText) {
   const staticReferenceNeedles = [
-    `- [${displayFilename2(rule)}]{${rule.path}}`,
-    `- [${displayFilename2(rule)}]{${rule.realPath}}`
+    `- [${displayFilename(rule)}]{${rule.path}}`,
+    `- [${displayFilename(rule)}]{${rule.realPath}}`
   ];
   if (staticReferenceNeedles.some((needle) => transcriptText.includes(needle))) {
     return true;
@@ -4006,7 +4025,7 @@ function isRuleAlreadyInTranscript(rule, transcriptText) {
   ].filter((marker) => marker !== null);
   return markers.some((marker) => transcriptText.includes(marker));
 }
-function displayFilename2(rule) {
+function displayFilename(rule) {
   const normalizedPath = rule.relativePath.length > 0 ? rule.relativePath : rule.path;
   const segments = normalizedPath.replace(/\\/g, "/").split("/").filter((segment) => segment.length > 0);
   return segments.at(-1) ?? normalizedPath;
@@ -4034,7 +4053,7 @@ function runStaticInjection(cwd, transcriptPath, eventName, cachePath, options, 
     });
   }
   const effectiveConfig = eventName === "UserPromptSubmit" ? withPromptBudget(config) : config;
-  const engine = createRulesEngine(options, effectiveConfig);
+  const engine = createRulesEngine(options, effectiveConfig, model);
   hydrateEngineState(engine, cachePath);
   engine.state.cwd = cwd;
   const loaded = engine.loadStaticRules(cwd);
@@ -4057,7 +4076,7 @@ function runPostCompactRecovery(input) {
     model: input.model,
     transcriptPath: input.transcriptPath
   });
-  const engine = createRulesEngine(input.options, effectiveConfig);
+  const engine = createRulesEngine(input.options, effectiveConfig, input.model);
   hydrateEngineState(engine, input.cachePath);
   engine.state.cwd = input.cwd;
   const loaded = engine.loadStaticRules(input.cwd);
@@ -4355,14 +4374,14 @@ async function runPostToolUseHook(input, options = {}) {
     return "";
   }
   const dynamicConfig = withDynamicBudget(config);
-  const engine = createRulesEngine(options, completedPostCompactKind !== undefined ? withPostCompactBudget(dynamicConfig, { model: input.model, transcriptPath: input.transcript_path }) : dynamicConfig);
+  const engine = createRulesEngine(options, completedPostCompactKind !== undefined ? withPostCompactBudget(dynamicConfig, { model: input.model, transcriptPath: input.transcript_path }) : dynamicConfig, input.model);
   hydrateEngineState(engine, cachePath);
   debugTimer.lap("hydrate", {
     dynamicDedupScopes: engine.state.dynamicDedup.size,
     dynamicTargetFingerprints: engine.state.dynamicTargetFingerprints.size,
     staticDedup: engine.state.staticDedup.size
   });
-  const dynamicTargetFingerprints = fingerprintDynamicTargets(input.cwd, targetPaths, config);
+  const dynamicTargetFingerprints = fingerprintDynamicTargets(input.cwd, targetPaths, config, input.model);
   debugTimer.lap("fingerprint", { fingerprints: dynamicTargetFingerprints.length });
   const pendingTargetFingerprints = dynamicTargetFingerprints.filter((target) => engine.state.dynamicTargetFingerprints.get(target.cacheKey) !== target.fingerprint);
   debugTimer.lap("pending", { pending: pendingTargetFingerprints.length });
