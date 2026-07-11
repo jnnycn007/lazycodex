@@ -66,11 +66,15 @@ function isRecord(value) {
 var SUBAGENT_STOP_EVENT = "SubagentStop";
 
 // components/lazycodex-executor-verify/src/codex-hook.ts
-var LAZYCODEX_EXECUTOR_AGENT = "lazycodex-executor";
+var RECEIPT_ENFORCED_AGENTS = new Set([
+  "lazycodex-worker-low",
+  "lazycodex-worker-medium",
+  "lazycodex-worker-high"
+]);
 function runSubagentStopHook(input, fs) {
   if (!isSubagentStopInput(input))
     return "";
-  if (input.agent_type !== LAZYCODEX_EXECUTOR_AGENT)
+  if (!RECEIPT_ENFORCED_AGENTS.has(input.agent_type))
     return "";
   if (transcriptHasContextPressureMarker(input.transcript_path, fs))
     return "";

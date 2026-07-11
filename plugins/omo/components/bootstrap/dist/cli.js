@@ -879,32 +879,88 @@ import { join as join8 } from "node:path";
 var MANAGED_REASONING_DEFAULT_UPGRADES = new Map([
   [
     "explorer",
-    {
-      previous: { model: "gpt-5.4-mini", effort: "low" },
-      current: { model: "gpt-5.6-terra", effort: "medium" }
-    }
+    [
+      {
+        previous: { model: "gpt-5.4-mini", effort: "low" },
+        current: { model: "gpt-5.6-terra", effort: "medium" }
+      },
+      {
+        previous: { model: "gpt-5.6-terra", effort: "medium" },
+        current: { model: "gpt-5.6-luna", effort: "low" }
+      }
+    ]
   ],
   [
     "librarian",
-    {
-      previous: { model: "gpt-5.4-mini", effort: "low" },
-      current: { model: "gpt-5.6-terra", effort: "medium" }
-    }
+    [
+      {
+        previous: { model: "gpt-5.4-mini", effort: "low" },
+        current: { model: "gpt-5.6-terra", effort: "medium" }
+      },
+      {
+        previous: { model: "gpt-5.6-terra", effort: "medium" },
+        current: { model: "gpt-5.6-luna", effort: "low" }
+      }
+    ]
   ],
   [
     "momus",
-    {
-      previous: { model: "gpt-5.5", effort: "xhigh" },
-      current: { model: "gpt-5.6-sol", effort: "ultra" }
-    }
+    [
+      {
+        previous: { model: "gpt-5.5", effort: "xhigh" },
+        current: { model: "gpt-5.6-sol", effort: "ultra" }
+      }
+    ]
+  ],
+  [
+    "plan",
+    [
+      {
+        previous: { model: "gpt-5.6-sol", effort: "xhigh" },
+        current: { model: "gpt-5.6-sol", effort: "max" }
+      }
+    ]
+  ],
+  [
+    "lazycodex-worker-medium",
+    [
+      {
+        previous: { model: "gpt-5.6-sol", effort: "high" },
+        current: { model: "gpt-5.6-luna", effort: "max" }
+      }
+    ]
+  ],
+  [
+    "lazycodex-qa-executor",
+    [
+      {
+        previous: { model: "gpt-5.6-terra", effort: "medium" },
+        current: { model: "gpt-5.6-luna", effort: "high" }
+      }
+    ]
+  ],
+  [
+    "lazycodex-gate-reviewer",
+    [
+      {
+        previous: { model: "gpt-5.6-sol", effort: "xhigh" },
+        current: { model: "gpt-5.6-sol", effort: "high" }
+      }
+    ]
   ]
 ]);
 function resolveManagedAgentReasoning(input) {
-  const upgrade = MANAGED_REASONING_DEFAULT_UPGRADES.get(input.agentName);
-  if (upgrade !== undefined && input.preserved.model === upgrade.previous.model && input.preserved.effort === upgrade.previous.effort && input.bundledModel === upgrade.current.model && input.bundledEffort === upgrade.current.effort) {
-    return upgrade.current.effort;
+  const steps = MANAGED_REASONING_DEFAULT_UPGRADES.get(input.agentName);
+  if (steps === undefined)
+    return input.preserved.effort;
+  const latest = steps[steps.length - 1];
+  if (latest === undefined)
+    return input.preserved.effort;
+  if (input.bundledModel !== latest.current.model || input.bundledEffort !== latest.current.effort) {
+    return input.preserved.effort;
   }
-  return input.preserved.effort;
+  const preservedMatchesAnyStep = steps.some((step) => input.preserved.model === step.previous.model && input.preserved.effort === step.previous.effort);
+  return preservedMatchesAnyStep ? latest.current.effort : input.preserved.effort;
 }
 
 // ../src/install/preserved-agent-settings.ts
@@ -2041,6 +2097,9 @@ function stripTomlLineComment(line) {
 var LEGACY_MANAGED_CODEX_AGENT_NAMES_TO_PURGE = ["codex-ultrawork-reviewer"];
 var CURRENT_MANAGED_CODEX_AGENT_NAMES = [
   "explorer",
+  "lazycodex-worker-high",
+  "lazycodex-worker-low",
+  "lazycodex-worker-medium",
   "librarian",
   "metis",
   "momus",
@@ -2458,12 +2517,18 @@ import { readFile as readFile9 } from "node:fs/promises";
 import { join as join16 } from "node:path";
 var FALLBACK_CODEX_MODEL_CATALOG = {
   current: {
-    model: "gpt-5.5",
-    modelContextWindow: 400000,
+    model: "gpt-5.6-sol",
+    modelContextWindow: 372000,
     modelReasoningEffort: "high",
     planModeReasoningEffort: "xhigh"
   },
   managedProfiles: [
+    {
+      model: "gpt-5.5",
+      modelContextWindow: 400000,
+      modelReasoningEffort: "high",
+      planModeReasoningEffort: "xhigh"
+    },
     {
       model: "gpt-5.5",
       modelContextWindow: 1e6,

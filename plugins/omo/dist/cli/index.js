@@ -2145,7 +2145,7 @@ var package_default;
 var init_package = __esm(() => {
   package_default = {
     name: "oh-my-opencode",
-    version: "4.16.3",
+    version: "4.17.0",
     description: "The Best AI Agent Harness - Batteries-Included OpenCode Plugin with Multi-Model Orchestration, Parallel Background Agents, and Crafted LSP/AST Tools",
     main: "./dist/index.js",
     types: "dist/index.d.ts",
@@ -2208,6 +2208,7 @@ var init_package = __esm(() => {
       "packages/lsp-tools-mcp/dist",
       "packages/lsp-daemon/package.json",
       "packages/lsp-daemon/dist",
+      "packages/git-bash-mcp/package.json",
       "packages/git-bash-mcp/dist",
       "packages/shared-skills/package.json",
       "packages/shared-skills/index.mjs",
@@ -2273,7 +2274,7 @@ var init_package = __esm(() => {
       "typecheck:packages": "tsgo --noEmit -p packages/rules-engine/tsconfig.json && tsgo --noEmit -p packages/delegate-core/tsconfig.json && tsgo --noEmit -p packages/mcp-stdio-core/tsconfig.json && tsgo --noEmit -p packages/mcp-client-core/tsconfig.json && tsgo --noEmit -p packages/git-bash-mcp/tsconfig.json && tsgo --noEmit -p packages/lsp-core/tsconfig.json && tsgo --noEmit -p packages/utils/tsconfig.json && tsgo --noEmit -p packages/model-core/tsconfig.json && tsgo --noEmit -p packages/omo-config-core/tsconfig.json && tsgo --noEmit -p packages/prompts-core/tsconfig.json && tsgo --noEmit -p packages/comment-checker-core/tsconfig.json && tsgo --noEmit -p packages/hashline-core/tsconfig.json && tsgo --noEmit -p packages/tmux-core/tsconfig.json && tsgo --noEmit -p packages/team-core/tsconfig.json && tsgo --noEmit -p packages/openclaw-core/tsconfig.json && tsgo --noEmit -p packages/boulder-state/tsconfig.json && tsgo --noEmit -p packages/telemetry-core/tsconfig.json && tsgo --noEmit -p packages/claude-code-compat-core/tsconfig.json && tsgo --noEmit -p packages/skills-loader-core/tsconfig.json && tsgo --noEmit -p packages/agents-md-core/tsconfig.json && tsgo --noEmit -p packages/omo-codex/plugin/shared/tsconfig.json && tsgo --noEmit -p packages/omo-codex/tsconfig.json && tsgo --noEmit -p packages/omo-senpi/tsconfig.json && tsgo --noEmit -p packages/senpi-task/tsconfig.json && tsgo --noEmit -p packages/pi-goal/tsconfig.json && tsgo --noEmit -p packages/pi-webfetch/tsconfig.json && tsgo --noEmit -p packages/omo-opencode/tsconfig.json",
       "typecheck:script": "tsgo --noEmit -p script/tsconfig.json",
       test: "bun test",
-      "test:codex": "bun run build:codex-install && bun run build:git-bash-mcp && bun run build:lsp-tools-mcp && bun run build:lsp-daemon && npm --prefix packages/lsp-tools-mcp test && npm --prefix packages/omo-codex/plugin ci && bun run --cwd packages/omo-codex/plugin build && npm --prefix packages/omo-codex/plugin/components/codegraph run typecheck && npm --prefix packages/omo-codex/plugin/components/codegraph test && node scripts/check-third-party-notices.mjs --ship && bun test packages/omo-opencode/src/cli/cli-installer.platform.test.ts packages/omo-codex/src/install/codex-cache.test.ts packages/omo-codex/src/install/codex-cleanup.test.ts packages/omo-codex/src/install/codex-config-agent-cleanup.test.ts packages/omo-codex/src/install/codex-config-autonomous-features.test.ts packages/omo-codex/src/install/codex-config-reasoning.test.ts packages/omo-codex/src/install/codex-config-toml.test.ts packages/omo-codex/src/install/codex-project-local-cleanup.test.ts packages/omo-codex/src/install/install-codex-project-local-cleanup.test.ts packages/omo-codex/src/install/install-codex.test.ts packages/omo-codex/src/install/install-codex-packaged.test.ts packages/omo-codex/src/install/link-cached-plugin-agents.test.ts packages/omo-codex/src/**/*.test.ts packages/utils/src/jsonc-parser.test.ts packages/utils/src/frontmatter.test.ts packages/hashline-core/src/hash-computation.test.ts packages/hashline-core/src/smoke-untested-modules.test.ts packages/rules-engine/src/index.test.ts packages/rules-engine/src/security-boundary.test.ts packages/agents-md-core/src/injector.test.ts packages/omo-codex/plugin/components/lsp/test/package-smoke.test.ts && node --test packages/omo-codex/plugin/test/*.test.mjs packages/omo-codex/scripts/install-cache-copy.test.mjs packages/omo-codex/scripts/install-cli-args.test.mjs packages/omo-codex/scripts/install-delegated-command.test.mjs packages/omo-codex/scripts/install-config-autonomous-features.test.mjs packages/omo-codex/scripts/install-config-autonomous.test.mjs packages/omo-codex/scripts/install-config-reasoning.test.mjs packages/omo-codex/scripts/install-config.test.mjs packages/omo-codex/scripts/install-hook-targets.test.mjs packages/omo-codex/scripts/install-project-local-cleanup.test.mjs packages/omo-codex/scripts/install-lazycodex-version-stamp.test.mjs packages/omo-codex/scripts/install-local-entrypoint.test.mjs packages/omo-codex/scripts/install-local-git-bash-preflight.test.mjs packages/omo-codex/scripts/install-local.test.mjs packages/omo-codex/scripts/install-marketplace-cache.test.mjs packages/omo-codex/scripts/install-mcp-context7-runtime.test.mjs packages/omo-codex/scripts/install-mcp-runtime.test.mjs packages/omo-codex/scripts/install-packaged-local.test.mjs packages/omo-codex/scripts/install-generated-bundle.test.mjs packages/omo-codex/scripts/install-agent-links.test.mjs packages/omo-codex/scripts/install-bin-links.test.mjs",
+      "test:codex": "bun run build:codex-install && bun run build:git-bash-mcp && bun run build:lsp-tools-mcp && bun run build:lsp-daemon && npm --prefix packages/lsp-tools-mcp test && npm --prefix packages/omo-codex/plugin ci && npm --prefix packages/omo-codex/plugin/components/ulw-loop test && bun run --cwd packages/omo-codex/plugin build && npm --prefix packages/omo-codex/plugin/components/codegraph run typecheck && npm --prefix packages/omo-codex/plugin/components/codegraph test && node scripts/check-third-party-notices.mjs --ship && bun test packages/omo-opencode/src/cli/cli-installer.platform.test.ts packages/omo-codex/src/install/codex-cache.test.ts packages/omo-codex/src/install/codex-cleanup.test.ts packages/omo-codex/src/install/codex-config-agent-cleanup.test.ts packages/omo-codex/src/install/codex-config-autonomous-features.test.ts packages/omo-codex/src/install/codex-config-reasoning.test.ts packages/omo-codex/src/install/codex-config-toml.test.ts packages/omo-codex/src/install/codex-project-local-cleanup.test.ts packages/omo-codex/src/install/install-codex-project-local-cleanup.test.ts packages/omo-codex/src/install/install-codex.test.ts packages/omo-codex/src/install/install-codex-packaged.test.ts packages/omo-codex/src/install/link-cached-plugin-agents.test.ts packages/omo-codex/src/**/*.test.ts packages/utils/src/jsonc-parser.test.ts packages/utils/src/frontmatter.test.ts packages/hashline-core/src/hash-computation.test.ts packages/hashline-core/src/smoke-untested-modules.test.ts packages/rules-engine/src/index.test.ts packages/rules-engine/src/security-boundary.test.ts packages/agents-md-core/src/injector.test.ts packages/omo-codex/plugin/components/lsp/test/package-smoke.test.ts && node --test packages/omo-codex/plugin/test/*.test.mjs packages/omo-codex/scripts/install-cache-copy.test.mjs packages/omo-codex/scripts/install-cli-args.test.mjs packages/omo-codex/scripts/install-delegated-command.test.mjs packages/omo-codex/scripts/install-config-autonomous-features.test.mjs packages/omo-codex/scripts/install-config-autonomous.test.mjs packages/omo-codex/scripts/install-config-reasoning.test.mjs packages/omo-codex/scripts/install-config.test.mjs packages/omo-codex/scripts/install-hook-targets.test.mjs packages/omo-codex/scripts/install-project-local-cleanup.test.mjs packages/omo-codex/scripts/install-lazycodex-version-stamp.test.mjs packages/omo-codex/scripts/install-local-entrypoint.test.mjs packages/omo-codex/scripts/install-local-git-bash-preflight.test.mjs packages/omo-codex/scripts/install-local.test.mjs packages/omo-codex/scripts/install-marketplace-cache.test.mjs packages/omo-codex/scripts/install-mcp-context7-runtime.test.mjs packages/omo-codex/scripts/install-mcp-runtime.test.mjs packages/omo-codex/scripts/install-packaged-local.test.mjs packages/omo-codex/scripts/install-generated-bundle.test.mjs packages/omo-codex/scripts/install-agent-links.test.mjs packages/omo-codex/scripts/install-bin-links.test.mjs",
       "test:senpi": "node packages/omo-senpi/plugin/scripts/build-extension.mjs && node packages/omo-senpi/plugin/scripts/sync-skills.mjs && node packages/omo-senpi/plugin/scripts/embed-directive.mjs --check && bun test packages/omo-senpi",
       "test:windows-codex": "bun run test:codex",
       "build:git-bash-mcp": "bun run --cwd packages/git-bash-mcp build"
@@ -2355,18 +2356,18 @@ var init_package = __esm(() => {
       typescript: "^6.0.3"
     },
     optionalDependencies: {
-      "oh-my-opencode-darwin-arm64": "4.16.3",
-      "oh-my-opencode-darwin-x64": "4.16.3",
-      "oh-my-opencode-darwin-x64-baseline": "4.16.3",
-      "oh-my-opencode-linux-arm64": "4.16.3",
-      "oh-my-opencode-linux-arm64-musl": "4.16.3",
-      "oh-my-opencode-linux-x64": "4.16.3",
-      "oh-my-opencode-linux-x64-baseline": "4.16.3",
-      "oh-my-opencode-linux-x64-musl": "4.16.3",
-      "oh-my-opencode-linux-x64-musl-baseline": "4.16.3",
-      "oh-my-opencode-windows-arm64": "4.16.3",
-      "oh-my-opencode-windows-x64": "4.16.3",
-      "oh-my-opencode-windows-x64-baseline": "4.16.3"
+      "oh-my-opencode-darwin-arm64": "4.17.0",
+      "oh-my-opencode-darwin-x64": "4.17.0",
+      "oh-my-opencode-darwin-x64-baseline": "4.17.0",
+      "oh-my-opencode-linux-arm64": "4.17.0",
+      "oh-my-opencode-linux-arm64-musl": "4.17.0",
+      "oh-my-opencode-linux-x64": "4.17.0",
+      "oh-my-opencode-linux-x64-baseline": "4.17.0",
+      "oh-my-opencode-linux-x64-musl": "4.17.0",
+      "oh-my-opencode-linux-x64-musl-baseline": "4.17.0",
+      "oh-my-opencode-windows-arm64": "4.17.0",
+      "oh-my-opencode-windows-x64": "4.17.0",
+      "oh-my-opencode-windows-x64-baseline": "4.17.0"
     },
     overrides: {
       "@earendil-works/pi-agent-core": "0.80.3",
@@ -9431,6 +9432,11 @@ var init_category_model_requirements = __esm(() => {
       fallbackChain: [
         {
           providers: ["openai", "vercel"],
+          model: "gpt-5.6-terra",
+          variant: "xhigh"
+        },
+        {
+          providers: ["openai", "vercel"],
           model: "gpt-5.6-sol",
           variant: "high"
         },
@@ -9492,6 +9498,11 @@ var init_category_model_requirements = __esm(() => {
     },
     "unspecified-low": {
       fallbackChain: [
+        {
+          providers: ["openai", "vercel"],
+          model: "gpt-5.6-luna",
+          variant: "xhigh"
+        },
         {
           providers: ["anthropic", "github-copilot", "opencode", "vercel"],
           model: "claude-sonnet-4-6"
@@ -10066,6 +10077,38 @@ var init_supplemental_entries = __esm(() => {
     "gpt-5.6-sol": {
       id: "gpt-5.6-sol",
       family: "gpt",
+      reasoning: true,
+      temperature: false,
+      toolCall: true,
+      modalities: {
+        input: ["text", "image", "pdf"],
+        output: ["text"]
+      },
+      limit: {
+        context: 1050000,
+        input: 922000,
+        output: 128000
+      }
+    },
+    "gpt-5.6-terra": {
+      id: "gpt-5.6-terra",
+      family: "gpt-mini",
+      reasoning: true,
+      temperature: false,
+      toolCall: true,
+      modalities: {
+        input: ["text", "image", "pdf"],
+        output: ["text"]
+      },
+      limit: {
+        context: 1050000,
+        input: 922000,
+        output: 128000
+      }
+    },
+    "gpt-5.6-luna": {
+      id: "gpt-5.6-luna",
+      family: "gpt-nano",
       reasoning: true,
       temperature: false,
       toolCall: true,
@@ -10685,28 +10728,7 @@ var init_agent_display_names = __esm(() => {
   };
 });
 // packages/omo-opencode/src/tools/delegate-task/anthropic-categories.ts
-var UNSPECIFIED_LOW_CATEGORY_PROMPT_APPEND = `<Category_Context>
-You are working on tasks that don't fit specific categories but require moderate effort.
-
-<Selection_Gate>
-BEFORE selecting this category, VERIFY ALL conditions:
-1. Task does NOT fit: quick (trivial), visual-engineering (UI), ultrabrain (deep logic), artistry (creative), writing (docs)
-2. Task requires more than trivial effort but is NOT system-wide
-3. Scope is contained within a few files/modules
-
-If task fits ANY other category, DO NOT select unspecified-low.
-This is NOT a default choice - it's for genuinely unclassifiable moderate-effort work.
-</Selection_Gate>
-</Category_Context>
-
-<Caller_Warning>
-THIS CATEGORY USES A MID-TIER MODEL (claude-sonnet-4-6).
-
-**PROVIDE CLEAR STRUCTURE:**
-1. MUST DO: Enumerate required actions explicitly
-2. MUST NOT DO: State forbidden actions to prevent scope creep
-3. EXPECTED OUTPUT: Define concrete success criteria
-</Caller_Warning>`, UNSPECIFIED_HIGH_CATEGORY_PROMPT_APPEND = `<Category_Context>
+var UNSPECIFIED_HIGH_CATEGORY_PROMPT_APPEND = `<Category_Context>
 You are working on tasks that don't fit specific categories but require substantial effort.
 
 <Selection_Gate>
@@ -10722,12 +10744,6 @@ If task is unclassifiable but moderate-effort, use unspecified-low instead.
 </Category_Context>`, ANTHROPIC_CATEGORIES;
 var init_anthropic_categories = __esm(() => {
   ANTHROPIC_CATEGORIES = [
-    {
-      name: "unspecified-low",
-      config: { model: "anthropic/claude-sonnet-4-6" },
-      description: "Tasks that don't fit other categories, low effort required",
-      promptAppend: UNSPECIFIED_LOW_CATEGORY_PROMPT_APPEND
-    },
     {
       name: "unspecified-high",
       config: { model: "anthropic/claude-opus-4-7", variant: "max" },
@@ -11024,6 +11040,27 @@ EXPECTED OUTPUT:
 \`\`\`
 
 If your prompt lacks this structure, REWRITE IT before delegating.
+</Caller_Warning>`, UNSPECIFIED_LOW_CATEGORY_PROMPT_APPEND = `<Category_Context>
+You are working on tasks that don't fit specific categories but require moderate effort.
+
+<Selection_Gate>
+BEFORE selecting this category, VERIFY ALL conditions:
+1. Task does NOT fit: quick (trivial), visual-engineering (UI), ultrabrain (deep logic), artistry (creative), writing (docs)
+2. Task requires more than trivial effort but is NOT system-wide
+3. Scope is contained within a few files/modules
+
+If task fits ANY other category, DO NOT select unspecified-low.
+This is NOT a default choice - it's for genuinely unclassifiable moderate-effort work.
+</Selection_Gate>
+</Category_Context>
+
+<Caller_Warning>
+THIS CATEGORY USES A LIGHTWEIGHT MODEL (gpt-5.6-luna).
+
+**PROVIDE CLEAR STRUCTURE:**
+1. MUST DO: Enumerate required actions explicitly
+2. MUST NOT DO: State forbidden actions to prevent scope creep
+3. EXPECTED OUTPUT: Define concrete success criteria
 </Caller_Warning>`, OPENAI_CATEGORIES;
 var init_openai_categories = __esm(() => {
   init_types();
@@ -11036,7 +11073,7 @@ var init_openai_categories = __esm(() => {
     },
     {
       name: "deep",
-      config: { model: "openai/gpt-5.6-sol", variant: "high" },
+      config: { model: "openai/gpt-5.6-terra", variant: "xhigh" },
       description: "Goal-oriented autonomous problem-solving on hairy problems requiring deep research. ONE goal + ONE deliverable per call \u2014 multiple goals must fan out as parallel `deep` calls, never bundled into one.",
       promptAppend: DEEP_CATEGORY_PROMPT_APPEND,
       resolvePromptAppend: resolveDeepCategoryPromptAppend
@@ -11046,6 +11083,12 @@ var init_openai_categories = __esm(() => {
       config: { model: "openai/gpt-5.4-mini" },
       description: "Trivial tasks - single file changes, typo fixes, simple modifications",
       promptAppend: QUICK_CATEGORY_PROMPT_APPEND
+    },
+    {
+      name: "unspecified-low",
+      config: { model: "openai/gpt-5.6-luna", variant: "xhigh" },
+      description: "Tasks that don't fit other categories, low effort required",
+      promptAppend: UNSPECIFIED_LOW_CATEGORY_PROMPT_APPEND
     }
   ];
 });
@@ -72553,7 +72596,7 @@ var package_default2;
 var init_package2 = __esm(() => {
   package_default2 = {
     name: "@oh-my-opencode/omo-codex",
-    version: "4.16.3",
+    version: "4.17.0",
     type: "module",
     private: true,
     description: "Codex harness adapter for oh-my-openagent. Vendored Codex plugin namespace (omo) + TypeScript installer + telemetry.",
@@ -75370,7 +75413,12 @@ function shouldCopyPluginPath(path7, root) {
   if (relative5 === "")
     return true;
   const parts = relative5.split(sep5);
-  return !parts.some((part) => part === ".git" || part === "node_modules");
+  if (parts.some((part) => part === ".git" || part === "node_modules"))
+    return false;
+  return !isNestedComponentMcpManifest(parts);
+}
+function isNestedComponentMcpManifest(parts) {
+  return parts.length > 1 && parts.at(-1) === ".mcp.json";
 }
 var removedSparkshellReferencePattern = /\b(?:sparkshell|spark[-_\s]+shell)\b/i;
 var removedSparkshellPromptSurfaceDirs = new Set([".codex-plugin", "agents", "bundled-rules", "hooks", "skills"]);
@@ -75897,6 +75945,9 @@ function stripTomlLineComment(line) {
 var LEGACY_MANAGED_CODEX_AGENT_NAMES_TO_PURGE = ["codex-ultrawork-reviewer"];
 var CURRENT_MANAGED_CODEX_AGENT_NAMES = [
   "explorer",
+  "lazycodex-worker-high",
+  "lazycodex-worker-low",
+  "lazycodex-worker-medium",
   "librarian",
   "metis",
   "momus",
@@ -76314,12 +76365,18 @@ import { readFile as readFile10 } from "fs/promises";
 import { join as join38 } from "path";
 var FALLBACK_CODEX_MODEL_CATALOG = {
   current: {
-    model: "gpt-5.5",
-    modelContextWindow: 400000,
+    model: "gpt-5.6-sol",
+    modelContextWindow: 372000,
     modelReasoningEffort: "high",
     planModeReasoningEffort: "xhigh"
   },
   managedProfiles: [
+    {
+      model: "gpt-5.5",
+      modelContextWindow: 400000,
+      modelReasoningEffort: "high",
+      planModeReasoningEffort: "xhigh"
+    },
     {
       model: "gpt-5.5",
       modelContextWindow: 1e6,
@@ -76763,32 +76820,88 @@ import { join as join41 } from "path";
 var MANAGED_REASONING_DEFAULT_UPGRADES = new Map([
   [
     "explorer",
-    {
-      previous: { model: "gpt-5.4-mini", effort: "low" },
-      current: { model: "gpt-5.6-terra", effort: "medium" }
-    }
+    [
+      {
+        previous: { model: "gpt-5.4-mini", effort: "low" },
+        current: { model: "gpt-5.6-terra", effort: "medium" }
+      },
+      {
+        previous: { model: "gpt-5.6-terra", effort: "medium" },
+        current: { model: "gpt-5.6-luna", effort: "low" }
+      }
+    ]
   ],
   [
     "librarian",
-    {
-      previous: { model: "gpt-5.4-mini", effort: "low" },
-      current: { model: "gpt-5.6-terra", effort: "medium" }
-    }
+    [
+      {
+        previous: { model: "gpt-5.4-mini", effort: "low" },
+        current: { model: "gpt-5.6-terra", effort: "medium" }
+      },
+      {
+        previous: { model: "gpt-5.6-terra", effort: "medium" },
+        current: { model: "gpt-5.6-luna", effort: "low" }
+      }
+    ]
   ],
   [
     "momus",
-    {
-      previous: { model: "gpt-5.5", effort: "xhigh" },
-      current: { model: "gpt-5.6-sol", effort: "ultra" }
-    }
+    [
+      {
+        previous: { model: "gpt-5.5", effort: "xhigh" },
+        current: { model: "gpt-5.6-sol", effort: "ultra" }
+      }
+    ]
+  ],
+  [
+    "plan",
+    [
+      {
+        previous: { model: "gpt-5.6-sol", effort: "xhigh" },
+        current: { model: "gpt-5.6-sol", effort: "max" }
+      }
+    ]
+  ],
+  [
+    "lazycodex-worker-medium",
+    [
+      {
+        previous: { model: "gpt-5.6-sol", effort: "high" },
+        current: { model: "gpt-5.6-luna", effort: "max" }
+      }
+    ]
+  ],
+  [
+    "lazycodex-qa-executor",
+    [
+      {
+        previous: { model: "gpt-5.6-terra", effort: "medium" },
+        current: { model: "gpt-5.6-luna", effort: "high" }
+      }
+    ]
+  ],
+  [
+    "lazycodex-gate-reviewer",
+    [
+      {
+        previous: { model: "gpt-5.6-sol", effort: "xhigh" },
+        current: { model: "gpt-5.6-sol", effort: "high" }
+      }
+    ]
   ]
 ]);
 function resolveManagedAgentReasoning(input) {
-  const upgrade = MANAGED_REASONING_DEFAULT_UPGRADES.get(input.agentName);
-  if (upgrade !== undefined && input.preserved.model === upgrade.previous.model && input.preserved.effort === upgrade.previous.effort && input.bundledModel === upgrade.current.model && input.bundledEffort === upgrade.current.effort) {
-    return upgrade.current.effort;
+  const steps = MANAGED_REASONING_DEFAULT_UPGRADES.get(input.agentName);
+  if (steps === undefined)
+    return input.preserved.effort;
+  const latest = steps[steps.length - 1];
+  if (latest === undefined)
+    return input.preserved.effort;
+  if (input.bundledModel !== latest.current.model || input.bundledEffort !== latest.current.effort) {
+    return input.preserved.effort;
   }
-  return input.preserved.effort;
+  const preservedMatchesAnyStep = steps.some((step) => input.preserved.model === step.previous.model && input.preserved.effort === step.previous.effort);
+  return preservedMatchesAnyStep ? latest.current.effort : input.preserved.effort;
 }
 
 // packages/omo-codex/src/install/preserved-agent-settings.ts
@@ -78178,6 +78291,9 @@ var MANAGED_MARKETPLACES = ["sisyphuslabs", "lazycodex", "code-yeongyu-codex-plu
 var LEGACY_MANAGED_CODEX_AGENT_NAMES_TO_PURGE2 = ["codex-ultrawork-reviewer"];
 var CURRENT_MANAGED_CODEX_AGENT_NAMES2 = [
   "explorer",
+  "lazycodex-worker-high",
+  "lazycodex-worker-low",
+  "lazycodex-worker-medium",
   "librarian",
   "metis",
   "momus",
