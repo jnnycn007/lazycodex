@@ -2146,7 +2146,7 @@ var package_default;
 var init_package = __esm(() => {
   package_default = {
     name: "oh-my-opencode",
-    version: "4.17.1",
+    version: "4.18.0",
     description: "The Best AI Agent Harness - Batteries-Included OpenCode Plugin with Multi-Model Orchestration, Parallel Background Agents, and Crafted LSP/AST Tools",
     main: "./dist/index.js",
     types: "dist/index.d.ts",
@@ -2253,6 +2253,7 @@ var init_package = __esm(() => {
       build: "bun run script/build.ts",
       "build:cli-node": "bun run script/build-cli-node.ts",
       "build:codex-install": "bun run script/build-codex-install.ts",
+      "install:codex-dev": "bun run script/build-codex-install.ts && bun run script/install-codex-dev.ts",
       "build:codex-plugin": "npm --prefix packages/omo-codex/plugin ci && bun run --cwd packages/omo-codex/plugin build",
       "build:senpi-plugin": "node packages/omo-senpi/plugin/scripts/build-extension.mjs && node packages/omo-senpi/plugin/scripts/sync-skills.mjs && node packages/omo-senpi/plugin/scripts/embed-directive.mjs --check",
       "build:materialize-frontend": "node packages/omo-codex/plugin/scripts/materialize-shared-upstreams.mjs --strict",
@@ -2357,18 +2358,18 @@ var init_package = __esm(() => {
       typescript: "^6.0.3"
     },
     optionalDependencies: {
-      "oh-my-opencode-darwin-arm64": "4.17.1",
-      "oh-my-opencode-darwin-x64": "4.17.1",
-      "oh-my-opencode-darwin-x64-baseline": "4.17.1",
-      "oh-my-opencode-linux-arm64": "4.17.1",
-      "oh-my-opencode-linux-arm64-musl": "4.17.1",
-      "oh-my-opencode-linux-x64": "4.17.1",
-      "oh-my-opencode-linux-x64-baseline": "4.17.1",
-      "oh-my-opencode-linux-x64-musl": "4.17.1",
-      "oh-my-opencode-linux-x64-musl-baseline": "4.17.1",
-      "oh-my-opencode-windows-arm64": "4.17.1",
-      "oh-my-opencode-windows-x64": "4.17.1",
-      "oh-my-opencode-windows-x64-baseline": "4.17.1"
+      "oh-my-opencode-darwin-arm64": "4.18.0",
+      "oh-my-opencode-darwin-x64": "4.18.0",
+      "oh-my-opencode-darwin-x64-baseline": "4.18.0",
+      "oh-my-opencode-linux-arm64": "4.18.0",
+      "oh-my-opencode-linux-arm64-musl": "4.18.0",
+      "oh-my-opencode-linux-x64": "4.18.0",
+      "oh-my-opencode-linux-x64-baseline": "4.18.0",
+      "oh-my-opencode-linux-x64-musl": "4.18.0",
+      "oh-my-opencode-linux-x64-musl-baseline": "4.18.0",
+      "oh-my-opencode-windows-arm64": "4.18.0",
+      "oh-my-opencode-windows-x64": "4.18.0",
+      "oh-my-opencode-windows-x64-baseline": "4.18.0"
     },
     overrides: {
       "@earendil-works/pi-agent-core": "0.80.3",
@@ -72657,7 +72658,7 @@ var package_default2;
 var init_package2 = __esm(() => {
   package_default2 = {
     name: "@oh-my-opencode/omo-codex",
-    version: "4.17.1",
+    version: "4.18.0",
     type: "module",
     private: true,
     description: "Codex harness adapter for oh-my-openagent. Vendored Codex plugin namespace (omo) + TypeScript installer + telemetry.",
@@ -75381,9 +75382,11 @@ function collectCommands(value, commands) {
 
 // packages/omo-codex/src/install/codex-cache-install.ts
 async function installCachedPlugin(input) {
+  const env2 = input.env ?? process.env;
+  const npmInstallEnv = sanitizeNpmInstallEnv(env2);
   if (input.buildSource !== false) {
-    await maybeRunNpmInstall(input.sourcePath, input.runCommand);
-    await maybeRunNpmBuild(input.sourcePath, input.runCommand);
+    await maybeRunNpmInstall(input.sourcePath, input.runCommand, npmInstallEnv);
+    await maybeRunNpmBuild(input.sourcePath, input.runCommand, env2);
   }
   const targetPath = join33(input.codexHome, "plugins", "cache", input.marketplaceName, input.name, input.version);
   const tempPath = createTempSiblingPath(targetPath);
@@ -75393,10 +75396,10 @@ async function installCachedPlugin(input) {
     await rewriteCachedPackageLocalFileDependencies(tempPath, input.sourcePath);
     await copyBundledMcpRuntimeDists({ pluginRoot: tempPath, sourceRoot: input.sourcePath });
     await copyRootRuntimeDists({ pluginRoot: tempPath, sourcePath: input.sourcePath });
-    await maybeRunNpmInstall(tempPath, input.runCommand, ["ci", "--omit=dev"]);
+    await maybeRunNpmInstall(tempPath, input.runCommand, npmInstallEnv, ["ci", "--omit=dev"]);
     await removeCachedManagedNpmBinShims(tempPath);
     if (input.buildSource === false)
-      await maybeRunNpmSyncSkills(tempPath, input.runCommand);
+      await maybeRunNpmSyncSkills(tempPath, input.runCommand, env2);
     await assertNoRemovedSparkshellPromptReferences(tempPath);
     await rewriteCachedMcpManifest(tempPath, input.sourcePath);
     await rewriteCachedManifestRoot(tempPath, tempPath, targetPath);
@@ -75408,12 +75411,12 @@ async function installCachedPlugin(input) {
   }
   return { name: input.name, version: input.version, path: targetPath };
 }
-async function maybeRunNpmInstall(cwd, runCommand, args = ["install"]) {
+async function maybeRunNpmInstall(cwd, runCommand, env2, args = ["install"]) {
   if (!await fileExistsStrict(join33(cwd, "package.json")))
     return;
-  await runCommand("npm", args, { cwd });
+  await runCommand("npm", args, { cwd, env: env2 });
 }
-async function maybeRunNpmBuild(cwd, runCommand) {
+async function maybeRunNpmBuild(cwd, runCommand, env2) {
   if (!await fileExistsStrict(join33(cwd, "package.json")))
     return;
   const packageJson = JSON.parse(await readFile8(join33(cwd, "package.json"), "utf8"));
@@ -75422,9 +75425,9 @@ async function maybeRunNpmBuild(cwd, runCommand) {
   const scripts = packageJson.scripts;
   if (!isPlainRecord3(scripts) || typeof scripts.build !== "string")
     return;
-  await runCommand("npm", ["run", "build"], { cwd });
+  await runCommand("npm", ["run", "build"], { cwd, env: env2 });
 }
-async function maybeRunNpmSyncSkills(cwd, runCommand) {
+async function maybeRunNpmSyncSkills(cwd, runCommand, env2) {
   if (!await fileExistsStrict(join33(cwd, "package.json")))
     return;
   const packageJson = JSON.parse(await readFile8(join33(cwd, "package.json"), "utf8"));
@@ -75433,7 +75436,10 @@ async function maybeRunNpmSyncSkills(cwd, runCommand) {
   const scripts = packageJson.scripts;
   if (!isPlainRecord3(scripts) || typeof scripts["sync:skills"] !== "string")
     return;
-  await runCommand("npm", ["run", "sync:skills"], { cwd });
+  await runCommand("npm", ["run", "sync:skills"], { cwd, env: env2 });
+}
+function sanitizeNpmInstallEnv(env2) {
+  return Object.fromEntries(Object.entries(env2).filter(([key]) => key.toLowerCase() !== "npm_config_allow_scripts"));
 }
 function createTempSiblingPath(targetPath) {
   return join33(dirname13(targetPath), `.tmp-${basename7(targetPath)}-${process.pid}-${Date.now()}`);
@@ -77463,6 +77469,10 @@ async function readDistributionManifest(repoRoot) {
   }
 }
 function resolveLazyCodexPluginVersion(input) {
+  const override = input.versionOverride?.trim();
+  if (override !== undefined && override.length > 0) {
+    return override;
+  }
   if (input.marketplaceName === "sisyphuslabs" && input.pluginName === "omo" && input.distributionManifest !== undefined) {
     return input.distributionManifest.version;
   }
@@ -78013,6 +78023,7 @@ async function runCodexInstaller(options = {}) {
     return;
   });
   const buildSource = await shouldBuildSourcePackages(repoRoot);
+  const versionOverride = env3.LAZYCODEX_DEV_VERSION?.trim() || undefined;
   const gitBashResolution = await prepareGitBashForInstall({
     platform,
     env: env3,
@@ -78039,13 +78050,15 @@ async function runCodexInstaller(options = {}) {
       manifestVersion: manifest.version,
       marketplaceName: marketplace.name,
       pluginName: entry.name,
-      distributionManifest
+      distributionManifest,
+      versionOverride
     });
     validatePathSegment(version2, "plugin version");
     log4(`Building ${entry.name}@${version2}`);
     const plugin = await installCachedPlugin({
       buildSource,
       codexHome,
+      env: env3,
       marketplaceName: marketplace.name,
       name: entry.name,
       runCommand,
@@ -99126,6 +99139,10 @@ function formatVersionOutput(info) {
       lines.push(`  ${SYMBOLS3.dev} ${import_picocolors17.default.cyan("Running in local development mode")}`);
       lines.push(`  ${import_picocolors17.default.dim("Using file:// protocol from config")}`);
       break;
+    case "dev":
+      lines.push(`  ${SYMBOLS3.dev} ${import_picocolors17.default.cyan("Running a local dev build")}`);
+      lines.push(`  ${import_picocolors17.default.dim("Installed from source; update checks are skipped")}`);
+      break;
     case "pinned":
       lines.push(`  ${SYMBOLS3.pin} ${import_picocolors17.default.magenta(`Version pinned to ${info.pinnedVersion}`)}`);
       lines.push(`  ${import_picocolors17.default.dim("Update check skipped for pinned versions")}`);
@@ -99197,6 +99214,19 @@ async function getLocalVersion(options = {}) {
       };
       console.log(options.json ? formatJsonOutput(info2) : formatVersionOutput(info2));
       return 1;
+    }
+    if (!/^\d+\.\d+\.\d+/.test(currentVersion)) {
+      const info2 = {
+        currentVersion,
+        latestVersion: null,
+        isUpToDate: false,
+        isLocalDev: true,
+        isPinned: false,
+        pinnedVersion: null,
+        status: "dev"
+      };
+      console.log(options.json ? formatJsonOutput(info2) : formatVersionOutput(info2));
+      return 0;
     }
     const { extractChannel: extractChannel2 } = await Promise.resolve().then(() => (init_auto_update_checker(), exports_auto_update_checker));
     const channel = extractChannel2(pluginInfo?.pinnedVersion ?? currentVersion);
