@@ -2,21 +2,21 @@ import { existsSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { OMO_LSP_DAEMON_CLI, OMO_LSP_DAEMON_VERSION, resolveDaemonRuntime, } from "@code-yeongyu/lsp-daemon/client";
 const requireFromHere = createRequire(import.meta.url);
-const PACKAGE_LSP_DAEMON_CLI = "@code-yeongyu/lsp-daemon/dist/cli.js";
-const CODEX_LSP_DAEMON_CLI_ENV = "CODEX_LSP_DAEMON_CLI";
-const CODEX_LSP_DAEMON_VERSION_ENV = "CODEX_LSP_DAEMON_VERSION";
+const PACKAGE_LSP_DAEMON_CLI = "@code-yeongyu/lsp-daemon/cli";
 export function ensureLspDaemonCliEnv(env = process.env) {
-    const configuredCli = env[CODEX_LSP_DAEMON_CLI_ENV]?.trim();
-    const resolution = configuredCli ? resolveConfiguredLspDaemonCli(configuredCli) : resolveLspDaemonCli();
-    if (!configuredCli)
-        env[CODEX_LSP_DAEMON_CLI_ENV] = resolution.cliPath;
-    if (!env[CODEX_LSP_DAEMON_VERSION_ENV]?.trim() && resolution.version !== null) {
-        env[CODEX_LSP_DAEMON_VERSION_ENV] = resolution.version;
-    }
+    const runtime = resolveDaemonRuntime(env, resolveLspDaemonCli());
+    env[OMO_LSP_DAEMON_CLI] = runtime.cliPath;
+    env[OMO_LSP_DAEMON_VERSION] = runtime.version;
 }
-export function resolveLspDaemonCliPath() {
-    return resolveLspDaemonCli().cliPath;
+export function resolveLspDaemonCliPath(env = process.env) {
+    const runtime = resolveDaemonRuntime(env, resolveLspDaemonCli());
+    if (env[OMO_LSP_DAEMON_CLI] === undefined)
+        env[OMO_LSP_DAEMON_CLI] = runtime.cliPath;
+    if (env[OMO_LSP_DAEMON_VERSION] === undefined)
+        env[OMO_LSP_DAEMON_VERSION] = runtime.version;
+    return runtime.cliPath;
 }
 function resolveLspDaemonCli() {
     const packageCli = resolvePackageLspDaemonCliPath();
@@ -31,14 +31,20 @@ function resolvePackageLspDaemonCliPath() {
     try {
         return requireFromHere.resolve(PACKAGE_LSP_DAEMON_CLI);
     }
-    catch {
+    catch (error) {
+        if (!(error instanceof Error))
+            throw error;
         return null;
     }
 }
 function resolveConfiguredLspDaemonCli(cliPath) {
+    const version = readDaemonPackageVersion(cliPath);
+    if (version === null) {
+        throw new Error(`Unable to determine packaged LSP daemon version beside ${cliPath}`);
+    }
     return {
         cliPath,
-        version: readDaemonPackageVersion(cliPath),
+        version,
     };
 }
 function readDaemonPackageVersion(cliPath) {
@@ -48,7 +54,10 @@ function readDaemonPackageVersion(cliPath) {
             return parsed["version"];
         }
     }
-    catch { }
+    catch (error) {
+        if (!(error instanceof Error))
+            throw error;
+    }
     return null;
 }
 function isRecord(value) {

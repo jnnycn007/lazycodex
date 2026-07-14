@@ -6,6 +6,9 @@ export interface ProxyOptions {
     output?: Writable;
     paths?: DaemonPaths;
     context?: DaemonToolContext;
+    cwd?: string;
+    env?: Record<string, string | undefined>;
+    homeDir?: string;
     ensure?: CallToolOptions["ensure"];
 }
 export declare function runMcpStdioProxy(options?: ProxyOptions): Promise<void>;

@@ -1,14 +1,16 @@
 import { spawn } from "node:child_process";
-import { closeSync, existsSync, mkdirSync, openSync } from "node:fs";
+import { closeSync, mkdirSync, openSync } from "node:fs";
 import { connect } from "node:net";
 import { dirname } from "node:path";
 import { execPath } from "node:process";
-import { fileURLToPath } from "node:url";
-import { tryAcquireLock, unlinkQuietly } from "./lock.js";
+import { authEnvelope, readAuthToken } from "./ipc-protocol.js";
+import { packagedRuntimeDefaults } from "./paths.js";
+import { resolveDaemonRuntime } from "./runtime-contract.js";
+import { createLineDecoder, encodeJsonLine } from "./socket-jsonrpc.js";
+export { InvalidRuntimeOverrideError, OMO_LSP_DAEMON_CLI, resolveDaemonRuntime } from "./runtime-contract.js";
 const PROBE_TIMEOUT_MS = 500;
 const DEFAULT_READY_TIMEOUT_MS = 5_000;
 const DEFAULT_POLL_INTERVAL_MS = 100;
-const CODEX_LSP_DAEMON_CLI_ENV = "CODEX_LSP_DAEMON_CLI";
 export class DaemonUnreachableError extends Error {
     constructor(socketPath) {
         super(`LSP daemon did not become reachable at ${socketPath}`);
@@ -18,50 +20,51 @@ export class DaemonUnreachableError extends Error {
 export async function ensureDaemonRunning(paths, deps = defaultEnsureDaemonDeps(), options = {}) {
     const readyTimeoutMs = options.readyTimeoutMs ?? DEFAULT_READY_TIMEOUT_MS;
     const pollIntervalMs = options.pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS;
-    if (await deps.probe(paths.socket))
+    if (await deps.probe(paths))
         return;
-    const lock = deps.acquireLock(paths.lock);
-    if (!lock) {
-        await waitUntilReachable(paths.socket, deps, readyTimeoutMs, pollIntervalMs);
-        return;
-    }
-    try {
-        if (await deps.probe(paths.socket))
-            return;
-        deps.cleanupStaleSocket(paths.socket);
-        deps.spawnDaemon(paths);
-        await waitUntilReachable(paths.socket, deps, readyTimeoutMs, pollIntervalMs);
-    }
-    finally {
-        lock.release();
-    }
+    deps.spawnDaemon(paths);
+    await waitUntilReachable(paths, deps, readyTimeoutMs, pollIntervalMs);
 }
-async function waitUntilReachable(socketPath, deps, readyTimeoutMs, pollIntervalMs) {
+async function waitUntilReachable(paths, deps, readyTimeoutMs, pollIntervalMs) {
     const deadline = deps.now() + readyTimeoutMs;
     for (;;) {
-        if (await deps.probe(socketPath))
+        if (await deps.probe(paths))
             return;
         if (deps.now() >= deadline)
-            throw new DaemonUnreachableError(socketPath);
+            throw new DaemonUnreachableError(paths.socket);
         await deps.sleep(pollIntervalMs);
     }
 }
-export function probeSocket(socketPath, timeoutMs = PROBE_TIMEOUT_MS) {
+export async function probeDaemon(paths, timeoutMs = PROBE_TIMEOUT_MS) {
+    const token = readAuthToken(paths);
+    if (!token)
+        return false;
+    return (await pingDaemon(paths, token, timeoutMs)) !== null;
+}
+export function pingDaemon(paths, token, timeoutMs = PROBE_TIMEOUT_MS) {
     return new Promise((resolve) => {
-        const socket = connect(socketPath);
-        const finish = (ok) => {
+        const socket = connect(paths.socket);
+        let settled = false;
+        const finish = (value) => {
+            if (settled)
+                return;
+            settled = true;
             socket.destroy();
-            resolve(ok);
+            resolve(value);
         };
-        const timer = setTimeout(() => finish(false), timeoutMs);
+        const timer = setTimeout(() => finish(null), timeoutMs);
         timer.unref?.();
-        socket.once("connect", () => {
+        const decoder = createLineDecoder((message) => {
             clearTimeout(timer);
-            finish(true);
+            finish(parsePingResponse(message));
         });
+        socket.once("connect", () => {
+            socket.write(encodeJsonLine({ jsonrpc: "2.0", id: 1, method: "omo/ping", params: { _omo: authEnvelope(token) } }));
+        });
+        socket.on("data", (chunk) => decoder.push(chunk));
         socket.once("error", () => {
             clearTimeout(timer);
-            finish(false);
+            finish(null);
         });
     });
 }
@@ -69,8 +72,7 @@ export function spawnDaemonProcess(paths) {
     mkdirSync(dirname(paths.log), { recursive: true });
     const logFd = openSync(paths.log, "a");
     try {
-        const cliPath = resolveDaemonCliPath();
-        const child = spawn(execPath, [cliPath, "daemon"], {
+        const child = spawn(execPath, [paths.cliPath, "daemon"], {
             detached: true,
             stdio: ["ignore", logFd, logFd],
         });
@@ -80,24 +82,45 @@ export function spawnDaemonProcess(paths) {
         closeSync(logFd);
     }
 }
-export function resolveDaemonCliPath(env = process.env) {
-    const override = env[CODEX_LSP_DAEMON_CLI_ENV]?.trim();
-    if (override)
-        return override;
-    return fileURLToPath(new URL("./cli.js", import.meta.url));
+export function resolveDaemonCliPath(env = process.env, defaults = packagedRuntimeDefaults()) {
+    return resolveDaemonRuntime(env, defaults).cliPath;
 }
 export function defaultEnsureDaemonDeps() {
     return {
-        probe: (socketPath) => probeSocket(socketPath),
-        acquireLock: (lockPath) => tryAcquireLock(lockPath),
-        cleanupStaleSocket: (socketPath) => {
-            if (existsSync(socketPath))
-                unlinkQuietly(socketPath);
-        },
+        probe: (paths) => probeDaemon(paths),
         spawnDaemon: (paths) => spawnDaemonProcess(paths),
         sleep: (ms) => new Promise((resolve) => {
             setTimeout(resolve, ms);
         }),
         now: () => Date.now(),
     };
+}
+function parsePingResponse(message) {
+    if (!message || typeof message !== "object" || Array.isArray(message))
+        return null;
+    const result = Reflect.get(message, "result");
+    if (!result || typeof result !== "object" || Array.isArray(result))
+        return null;
+    const pid = Reflect.get(result, "pid");
+    const nonce = Reflect.get(result, "nonce");
+    const startedAt = Reflect.get(result, "startedAt");
+    const endpoint = Reflect.get(result, "endpoint");
+    if (typeof pid !== "number" || typeof nonce !== "string" || typeof startedAt !== "string")
+        return null;
+    if (!endpoint || typeof endpoint !== "object" || Array.isArray(endpoint))
+        return null;
+    const path = Reflect.get(endpoint, "path");
+    const kind = Reflect.get(endpoint, "kind");
+    if (typeof path !== "string")
+        return null;
+    if (kind === "windows")
+        return { pid, nonce, startedAt, endpoint: { kind, path } };
+    if (kind === "missing")
+        return { pid, nonce, startedAt, endpoint: { kind, path } };
+    const dev = Reflect.get(endpoint, "dev");
+    const ino = Reflect.get(endpoint, "ino");
+    if (kind === "unix" && typeof dev === "number" && typeof ino === "number") {
+        return { pid, nonce, startedAt, endpoint: { kind, path, dev, ino } };
+    }
+    return null;
 }
