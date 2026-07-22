@@ -3854,6 +3854,17 @@ var POST_COMPACT_MIN_RESERVED_TOKENS = 8000;
 var POST_COMPACT_MIN_GUIDE_CHARS = 500;
 var FALLBACK_CONTEXT_WINDOW_TOKENS = 200000;
 var MODEL_CONTEXT_BUDGETS = [
+  { slug: "gpt-5.6-sol", contextWindowTokens: 372000, effectivePercent: DEFAULT_EFFECTIVE_CONTEXT_WINDOW_PERCENT },
+  {
+    slug: "gpt-5.6-terra",
+    contextWindowTokens: 372000,
+    effectivePercent: DEFAULT_EFFECTIVE_CONTEXT_WINDOW_PERCENT
+  },
+  {
+    slug: "gpt-5.6-luna",
+    contextWindowTokens: 372000,
+    effectivePercent: DEFAULT_EFFECTIVE_CONTEXT_WINDOW_PERCENT
+  },
   { slug: "gpt-5.5", contextWindowTokens: 272000, effectivePercent: DEFAULT_EFFECTIVE_CONTEXT_WINDOW_PERCENT },
   { slug: "gpt-5.4-mini", contextWindowTokens: 272000, effectivePercent: DEFAULT_EFFECTIVE_CONTEXT_WINDOW_PERCENT },
   {

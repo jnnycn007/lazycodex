@@ -438,7 +438,7 @@ async function readOptionalFile(path) {
 }
 
 // components/bootstrap/src/worker.ts
-import { appendFile as appendFile2, mkdir as mkdir8, readFile as readFile13 } from "node:fs/promises";
+import { appendFile as appendFile2, mkdir as mkdir8, readFile as readFile14 } from "node:fs/promises";
 import { homedir as homedir4 } from "node:os";
 import { dirname as dirname9, join as join22, resolve as resolve7 } from "node:path";
 import { fileURLToPath as fileURLToPath2 } from "node:url";
@@ -864,7 +864,7 @@ async function defaultVersionProbe2(binaryPath) {
 }
 
 // components/bootstrap/src/setup.ts
-import { copyFile as copyFile2, mkdir as mkdir7, readdir as readdir5, rm as rm10, stat as stat5 } from "node:fs/promises";
+import { copyFile as copyFile2, mkdir as mkdir7, readFile as readFile13, readdir as readdir5, rm as rm10, stat as stat5 } from "node:fs/promises";
 import { join as join21 } from "node:path";
 
 // ../src/install/link-cached-plugin-agents.ts
@@ -1457,6 +1457,10 @@ var MANAGED_REASONING_DEFAULT_UPGRADES = new Map([
       {
         previous: { model: "gpt-5.6-sol", effort: "xhigh" },
         current: { model: "gpt-5.6-sol", effort: "max" }
+      },
+      {
+        previous: { model: "gpt-5.6-sol", effort: "max" },
+        current: { model: "gpt-5.6-sol", effort: "high" }
       }
     ]
   ],
@@ -1466,6 +1470,37 @@ var MANAGED_REASONING_DEFAULT_UPGRADES = new Map([
       {
         previous: { model: "gpt-5.6-sol", effort: "high" },
         current: { model: "gpt-5.6-luna", effort: "max" }
+      },
+      {
+        previous: { model: "gpt-5.6-luna", effort: "max" },
+        current: { model: "gpt-5.6-terra", effort: "high" }
+      }
+    ]
+  ],
+  [
+    "lazycodex-worker-high",
+    [
+      {
+        previous: { model: "gpt-5.6-sol", effort: "max" },
+        current: { model: "gpt-5.6-sol", effort: "medium" }
+      }
+    ]
+  ],
+  [
+    "lazycodex-code-reviewer",
+    [
+      {
+        previous: { model: "gpt-5.6-sol", effort: "xhigh" },
+        current: { model: "gpt-5.6-terra", effort: "medium" }
+      }
+    ]
+  ],
+  [
+    "lazycodex-clone-fidelity-reviewer",
+    [
+      {
+        previous: { model: "gpt-5.6-sol", effort: "xhigh" },
+        current: { model: "gpt-5.6-terra", effort: "high" }
       }
     ]
   ],
@@ -1484,6 +1519,10 @@ var MANAGED_REASONING_DEFAULT_UPGRADES = new Map([
       {
         previous: { model: "gpt-5.6-sol", effort: "xhigh" },
         current: { model: "gpt-5.6-sol", effort: "high" }
+      },
+      {
+        previous: { model: "gpt-5.6-sol", effort: "high" },
+        current: { model: "gpt-5.6-sol", effort: "low" }
       }
     ]
   ]
@@ -2303,10 +2342,6 @@ async function existingNonSymlink(path) {
   }
 }
 
-// ../src/install/codex-config-toml.ts
-import { mkdir as mkdir6, readFile as readFile10 } from "node:fs/promises";
-import { dirname as dirname8 } from "node:path";
-
 // ../src/install/codex-config-agents.ts
 var LEGACY_MANAGED_CODEX_AGENT_NAMES_TO_PURGE = ["codex-ultrawork-reviewer"];
 var CURRENT_MANAGED_CODEX_AGENT_NAMES = [
@@ -2336,6 +2371,12 @@ function removeStaleManagedAgentBlocks(config, keepAgentNames) {
 
 `);
 }
+function hasForeignAgentRegistration(config, agentConfig) {
+  const section = findTomlSection(config, `agents.${tomlKeySegment(agentConfig.name)}`);
+  if (!section)
+    return false;
+  return !section.text.includes(`config_file = ${JSON.stringify(agentConfig.configFile)}`);
+}
 function ensureAgentConfig(config, agentConfig) {
   const header = `agents.${tomlKeySegment(agentConfig.name)}`;
   const section = findTomlSection(config, header);
@@ -2349,6 +2390,10 @@ config_file = ${configFile}
 function tomlKeySegment(value) {
   return /^[A-Za-z0-9_-]+$/.test(value) ? value : JSON.stringify(value);
 }
+
+// ../src/install/codex-config-toml.ts
+import { mkdir as mkdir6, readFile as readFile10 } from "node:fs/promises";
+import { dirname as dirname8 } from "node:path";
 
 // ../src/install/codex-config-atomic-write.ts
 import { lstat as lstat8, readlink as readlink4, realpath, rename as rename3, unlink, writeFile as writeFile6 } from "node:fs/promises";
@@ -3520,13 +3565,15 @@ async function updateConfigStep(options, inputs, degraded) {
   const configPath = join21(options.codexHome, "config.toml");
   try {
     await assertWritableConfigIfPresent(configPath);
+    const existingConfig = await readConfigIfPresent(configPath);
+    const agentConfigs = inputs.agentConfigs.filter((agentConfig) => !hasForeignAgentRegistration(existingConfig, agentConfig));
     const trustedHookStates = await trustedHookStatesForPlugin({
       marketplaceName: SETUP_MARKETPLACE_NAME,
       pluginName: SETUP_PLUGIN_NAME,
       pluginRoot: options.pluginRoot
     });
     await updateCodexConfig({
-      agentConfigs: inputs.agentConfigs,
+      agentConfigs,
       autonomousPermissions: false,
       configPath,
       gitBashEnabled: inputs.gitBashEnabled,
@@ -3558,6 +3605,15 @@ async function assertWritableConfigIfPresent(configPath) {
 }
 function errorCode(error) {
   return error instanceof Error && "code" in error && typeof error.code === "string" ? error.code : undefined;
+}
+async function readConfigIfPresent(configPath) {
+  try {
+    return await readFile13(configPath, "utf8");
+  } catch (error) {
+    if (errorCode(error) === "ENOENT")
+      return "";
+    throw error;
+  }
 }
 async function linkComponentBinsStep(options, degraded) {
   const binDir = resolveCodexInstallerBinDir({ codexHome: options.codexHome, env: options.env });
@@ -3678,7 +3734,7 @@ function resolvePluginDataRoot(env) {
 }
 async function readPluginVersion(pluginRoot) {
   try {
-    const parsed = JSON.parse(await readFile13(join22(pluginRoot, ".codex-plugin", "plugin.json"), "utf8"));
+    const parsed = JSON.parse(await readFile14(join22(pluginRoot, ".codex-plugin", "plugin.json"), "utf8"));
     if (typeof parsed !== "object" || parsed === null)
       return;
     const version = parsed["version"];

@@ -212,6 +212,78 @@ function errorCode(error) {
 function isPlainRecord(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
+
+class DaemonRequestError extends Error {
+  requestWritten;
+  constructor(message, requestWritten) {
+    super(message);
+    this.name = "DaemonRequestError";
+    this.requestWritten = requestWritten;
+  }
+}
+
+class DaemonAuthenticationRejectedError extends DaemonRequestError {
+  constructor() {
+    super("daemon authentication failed before dispatch", true);
+    this.name = "DaemonAuthenticationRejectedError";
+  }
+}
+
+class DaemonRequestCancelledError extends DaemonRequestError {
+  constructor(requestWritten) {
+    super("daemon request cancelled", requestWritten);
+    this.name = "DaemonRequestCancelledError";
+  }
+}
+
+class DaemonRequestTimedOutError extends DaemonRequestError {
+  timeoutMs;
+  constructor(requestWritten, timeoutMs) {
+    super("daemon request timed out", requestWritten);
+    this.name = "DaemonRequestTimedOutError";
+    this.timeoutMs = timeoutMs;
+  }
+}
+function daemonFailureResult(paths, error) {
+  if (error instanceof DaemonRequestCancelledError)
+    return daemonCancelledResult(paths);
+  if (error instanceof DaemonRequestTimedOutError)
+    return daemonTimedOutResult(paths, error.timeoutMs);
+  return daemonUnreachableResult(paths, error);
+}
+function daemonCancelledResult(paths) {
+  const text = [
+    "LSP daemon request cancelled: the caller aborted this request (for example, the turn was interrupted).",
+    "The daemon stays available; no LSP work was applied. Retry when you are ready.",
+    `Socket: ${paths.socket}`
+  ].join(`
+`);
+  return { content: [{ type: "text", text }], isError: true };
+}
+function daemonTimedOutResult(paths, timeoutMs) {
+  const text = [
+    `LSP daemon request timed out after ${timeoutMs}ms: the daemon did not respond in time.`,
+    "The daemon stays available but may be busy. Retry when you are ready.",
+    `Socket: ${paths.socket}`,
+    `Logs: ${paths.log}`
+  ].join(`
+`);
+  return { content: [{ type: "text", text }], isError: true };
+}
+function daemonUnreachableResult(paths, error) {
+  const text = [
+    `LSP daemon unreachable: ${errorText(error)}.`,
+    "The MCP server is a thin proxy and never runs language servers in-process.",
+    `Socket: ${paths.socket}`,
+    `Logs: ${paths.log}`,
+    "The daemon is auto-started on demand and will be retried on the next request."
+  ].join(`
+`);
+  return { content: [{ type: "text", text }], isError: true };
+}
+function errorText(error) {
+  return error instanceof Error ? error.message : String(error);
+}
 var OMO_DAEMON_PROTOCOL_VERSION = 1;
 var AUTH_ERROR_CODE = -32001;
 function authEnvelope(token) {
@@ -3134,8 +3206,13 @@ class LspClient extends LspClientConnection {
       if (!pushFallbackOnly)
         continue;
       const remainingMs = deadlineAt - Date.now();
-      if (remainingMs <= 0)
+      if (remainingMs <= 0) {
+        if (!this.isDiagnosticPullSupported() && snapshot.publishGeneration === 0) {
+          const cached = this.documents.getPullCache(snapshot);
+          return { items: cached === null ? [] : [...cached.diagnostics] };
+        }
         return this.freshnessTimeout(absPath);
+      }
       const waitMs = push.status === "wait" ? Math.min(push.waitMs, remainingMs) : remainingMs;
       await waitForDiagnosticsActivity(this.documents.waitForDiagnosticsActivity(snapshot, waitMs), signal);
     }
@@ -4995,29 +5072,6 @@ var LSP_MCP_TOOLS = [
 var CONTEXT_KEY = "_context";
 var DEFAULT_REQUEST_TIMEOUT_MS = 30000;
 var nextProxyRequestId = 1;
-
-class DaemonRequestError extends Error {
-  requestWritten;
-  constructor(message, requestWritten) {
-    super(message);
-    this.name = "DaemonRequestError";
-    this.requestWritten = requestWritten;
-  }
-}
-
-class DaemonAuthenticationRejectedError extends DaemonRequestError {
-  constructor() {
-    super("daemon authentication failed before dispatch", true);
-    this.name = "DaemonAuthenticationRejectedError";
-  }
-}
-
-class DaemonRequestCancelledError extends DaemonRequestError {
-  constructor(requestWritten) {
-    super("daemon request cancelled", requestWritten);
-    this.name = "DaemonRequestCancelledError";
-  }
-}
 async function callToolViaDaemon(name, args, options) {
   const context = requireContext(options.context);
   const paths = options.paths ?? daemonPaths();
@@ -5046,7 +5100,7 @@ async function callToolViaDaemon(name, args, options) {
         break;
     }
   }
-  return daemonUnreachableResult(paths, lastError);
+  return daemonFailureResult(paths, lastError);
 }
 function callDiagnosticsViaDaemon(filePath, options) {
   return callToolViaDaemon("diagnostics", { filePath, severity: "error" }, options);
@@ -5079,17 +5133,6 @@ function ensureDaemonAvailable(paths, ensure, signal) {
     signal.addEventListener("abort", onAbort, { once: true });
     Promise.resolve().then(() => ensure(paths, signal)).then(() => finish(() => resolve9()), (error) => finish(() => reject(signal.aborted ? new DaemonRequestCancelledError(false) : error)));
   });
-}
-function daemonUnreachableResult(paths, error) {
-  const text2 = [
-    `LSP daemon unreachable: ${errorText(error)}.`,
-    "The MCP server is a thin proxy and never runs language servers in-process.",
-    `Socket: ${paths.socket}`,
-    `Logs: ${paths.log}`,
-    "The daemon is auto-started on demand and will be retried on the next request."
-  ].join(`
-`);
-  return { content: [{ type: "text", text: text2 }], isError: true };
 }
 function sendToolCall(paths, token, name, args, options) {
   return new Promise((resolve9, reject) => {
@@ -5130,7 +5173,7 @@ function sendToolCall(paths, token, name, args, options) {
     };
     const timer = setTimeout(() => {
       sendCancel();
-      finish(() => reject(new DaemonRequestError("daemon request timed out", requestWritten)));
+      finish(() => reject(new DaemonRequestTimedOutError(requestWritten, options.timeoutMs)));
     }, options.timeoutMs);
     timer.unref();
     if (options.signal?.aborted) {
@@ -5188,9 +5231,6 @@ function allocateProxyRequestId() {
 }
 function isRetryableTool(name) {
   return name !== "rename" && name !== "lsp_rename";
-}
-function errorText(error) {
-  return error instanceof Error ? error.message : String(error);
 }
 var OMO_LSP_DAEMON_CLI2 = "OMO_LSP_DAEMON_CLI";
 var OMO_LSP_DAEMON_VERSION2 = "OMO_LSP_DAEMON_VERSION";

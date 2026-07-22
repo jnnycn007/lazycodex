@@ -177,6 +177,81 @@ function isPlainRecord(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+// src/daemon-request-error.ts
+class DaemonRequestError extends Error {
+  requestWritten;
+  constructor(message, requestWritten) {
+    super(message);
+    this.name = "DaemonRequestError";
+    this.requestWritten = requestWritten;
+  }
+}
+
+class DaemonAuthenticationRejectedError extends DaemonRequestError {
+  constructor() {
+    super("daemon authentication failed before dispatch", true);
+    this.name = "DaemonAuthenticationRejectedError";
+  }
+}
+
+class DaemonRequestCancelledError extends DaemonRequestError {
+  constructor(requestWritten) {
+    super("daemon request cancelled", requestWritten);
+    this.name = "DaemonRequestCancelledError";
+  }
+}
+
+class DaemonRequestTimedOutError extends DaemonRequestError {
+  timeoutMs;
+  constructor(requestWritten, timeoutMs) {
+    super("daemon request timed out", requestWritten);
+    this.name = "DaemonRequestTimedOutError";
+    this.timeoutMs = timeoutMs;
+  }
+}
+
+// src/daemon-failure-result.ts
+function daemonFailureResult(paths, error) {
+  if (error instanceof DaemonRequestCancelledError)
+    return daemonCancelledResult(paths);
+  if (error instanceof DaemonRequestTimedOutError)
+    return daemonTimedOutResult(paths, error.timeoutMs);
+  return daemonUnreachableResult(paths, error);
+}
+function daemonCancelledResult(paths) {
+  const text = [
+    "LSP daemon request cancelled: the caller aborted this request (for example, the turn was interrupted).",
+    "The daemon stays available; no LSP work was applied. Retry when you are ready.",
+    `Socket: ${paths.socket}`
+  ].join(`
+`);
+  return { content: [{ type: "text", text }], isError: true };
+}
+function daemonTimedOutResult(paths, timeoutMs) {
+  const text = [
+    `LSP daemon request timed out after ${timeoutMs}ms: the daemon did not respond in time.`,
+    "The daemon stays available but may be busy. Retry when you are ready.",
+    `Socket: ${paths.socket}`,
+    `Logs: ${paths.log}`
+  ].join(`
+`);
+  return { content: [{ type: "text", text }], isError: true };
+}
+function daemonUnreachableResult(paths, error) {
+  const text = [
+    `LSP daemon unreachable: ${errorText(error)}.`,
+    "The MCP server is a thin proxy and never runs language servers in-process.",
+    `Socket: ${paths.socket}`,
+    `Logs: ${paths.log}`,
+    "The daemon is auto-started on demand and will be retried on the next request."
+  ].join(`
+`);
+  return { content: [{ type: "text", text }], isError: true };
+}
+function errorText(error) {
+  return error instanceof Error ? error.message : String(error);
+}
+
 // src/ensure-daemon.ts
 import { spawn } from "node:child_process";
 import { closeSync as closeSync2, mkdirSync as mkdirSync2, openSync as openSync2 } from "node:fs";
@@ -904,16 +979,35 @@ function bufferFromChunk(chunk) {
 
 // ../mcp-stdio-core/src/server.ts
 var DEFAULT_IDLE_TIMEOUT_MS = 10 * 60000;
+var DEFAULT_PARENT_POLL_INTERVAL_MS = 30000;
 var noopLog = () => {};
+function isProcessAlive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return !hasErrorCode(error, "ESRCH");
+  }
+}
 async function runJsonRpcStdioServer(config) {
   const log = config.log ?? noopLog;
   const idleTimeoutMs = config.idleTimeoutMs ?? DEFAULT_IDLE_TIMEOUT_MS;
-  const idleTimer = createIdleTimer(idleTimeoutMs, log, config.onIdleTimeout);
+  let isClosed = false;
+  const idleTimer = createIdleTimer(idleTimeoutMs, log, () => {
+    isClosed = true;
+    config.onIdleTimeout?.();
+  });
+  const watchdog = createParentWatchdog(config.parentWatchdog, (parentPid, pollIntervalMs) => {
+    isClosed = true;
+    log("parent_exit", { parent_pid: parentPid, poll_interval_ms: pollIntervalMs });
+    config.onParentExit?.();
+    config.input.destroy();
+  });
   log("stdio_started", { cwd: process.cwd(), idle_timeout_ms: idleTimeoutMs });
   idleTimer.arm();
   try {
     for await (const message of readStdioJsonRpcMessages(config.input)) {
-      if (idleTimer.closed())
+      if (isClosed)
         break;
       idleTimer.arm();
       if (message.kind === "parse_error") {
@@ -924,8 +1018,12 @@ async function runJsonRpcStdioServer(config) {
       if (!await handleRequest(message, config, log))
         break;
     }
+  } catch (error) {
+    if (!(isClosed && hasErrorCode(error, "ERR_STREAM_PREMATURE_CLOSE")))
+      throw error;
   } finally {
     idleTimer.clear();
+    watchdog.clear();
     log("stdio_stopped");
   }
 }
@@ -981,9 +1079,33 @@ function isTerminalOutputError(error) {
     return false;
   return error.code === "EPIPE" || error.code === "ERR_STREAM_DESTROYED" || error.code === "ERR_STREAM_WRITE_AFTER_END";
 }
-function createIdleTimer(idleTimeoutMs, log, onIdleTimeout) {
+function hasErrorCode(error, code) {
+  return error instanceof Error && "code" in error && error.code === code;
+}
+function createParentWatchdog(config, onDeadParent) {
+  if (config === undefined)
+    return { clear: () => {} };
+  const pollIntervalMs = config.pollIntervalMs ?? DEFAULT_PARENT_POLL_INTERVAL_MS;
+  if (pollIntervalMs <= 0)
+    return { clear: () => {} };
+  const parentPid = config.parentPid ?? process.ppid;
+  const probeAlive = config.probeAlive ?? isProcessAlive;
+  let fired = false;
+  const timer = setInterval(() => {
+    if (fired || probeAlive(parentPid))
+      return;
+    fired = true;
+    onDeadParent(parentPid, pollIntervalMs);
+  }, pollIntervalMs);
+  timer.unref();
+  return {
+    clear: () => {
+      clearInterval(timer);
+    }
+  };
+}
+function createIdleTimer(idleTimeoutMs, log, onTimeout) {
   let timer = null;
-  let isClosed = false;
   return {
     arm: () => {
       if (timer !== null)
@@ -991,9 +1113,8 @@ function createIdleTimer(idleTimeoutMs, log, onIdleTimeout) {
       if (idleTimeoutMs <= 0)
         return;
       timer = setTimeout(() => {
-        isClosed = true;
         log("idle_timeout", { idle_timeout_ms: idleTimeoutMs });
-        onIdleTimeout?.();
+        onTimeout();
       }, idleTimeoutMs);
       timer.unref();
     },
@@ -1002,8 +1123,7 @@ function createIdleTimer(idleTimeoutMs, log, onIdleTimeout) {
         return;
       clearTimeout(timer);
       timer = null;
-    },
-    closed: () => isClosed
+    }
   };
 }
 // ../lsp-core/src/lsp/client-wrapper.ts
@@ -3625,8 +3745,13 @@ class LspClient extends LspClientConnection {
       if (!pushFallbackOnly)
         continue;
       const remainingMs = deadlineAt - Date.now();
-      if (remainingMs <= 0)
+      if (remainingMs <= 0) {
+        if (!this.isDiagnosticPullSupported() && snapshot.publishGeneration === 0) {
+          const cached = this.documents.getPullCache(snapshot);
+          return { items: cached === null ? [] : [...cached.diagnostics] };
+        }
         return this.freshnessTimeout(absPath);
+      }
       const waitMs = push.status === "wait" ? Math.min(push.waitMs, remainingMs) : remainingMs;
       await waitForDiagnosticsActivity(this.documents.waitForDiagnosticsActivity(snapshot, waitMs), signal);
     }
@@ -5715,29 +5840,6 @@ function parseContext(value) {
 // src/daemon-client.ts
 var DEFAULT_REQUEST_TIMEOUT_MS = 30000;
 var nextProxyRequestId = 1;
-
-class DaemonRequestError extends Error {
-  requestWritten;
-  constructor(message, requestWritten) {
-    super(message);
-    this.name = "DaemonRequestError";
-    this.requestWritten = requestWritten;
-  }
-}
-
-class DaemonAuthenticationRejectedError extends DaemonRequestError {
-  constructor() {
-    super("daemon authentication failed before dispatch", true);
-    this.name = "DaemonAuthenticationRejectedError";
-  }
-}
-
-class DaemonRequestCancelledError extends DaemonRequestError {
-  constructor(requestWritten) {
-    super("daemon request cancelled", requestWritten);
-    this.name = "DaemonRequestCancelledError";
-  }
-}
 async function callToolViaDaemon(name, args, options) {
   const context = requireContext(options.context);
   const paths = options.paths ?? daemonPaths();
@@ -5766,7 +5868,7 @@ async function callToolViaDaemon(name, args, options) {
         break;
     }
   }
-  return daemonUnreachableResult(paths, lastError);
+  return daemonFailureResult(paths, lastError);
 }
 function callDiagnosticsViaDaemon(filePath, options) {
   return callToolViaDaemon("diagnostics", { filePath, severity: "error" }, options);
@@ -5811,17 +5913,6 @@ function ensureDaemonAvailable(paths, ensure, signal) {
     Promise.resolve().then(() => ensure(paths, signal)).then(() => finish(() => resolve9()), (error) => finish(() => reject(signal.aborted ? new DaemonRequestCancelledError(false) : error)));
   });
 }
-function daemonUnreachableResult(paths, error) {
-  const text2 = [
-    `LSP daemon unreachable: ${errorText(error)}.`,
-    "The MCP server is a thin proxy and never runs language servers in-process.",
-    `Socket: ${paths.socket}`,
-    `Logs: ${paths.log}`,
-    "The daemon is auto-started on demand and will be retried on the next request."
-  ].join(`
-`);
-  return { content: [{ type: "text", text: text2 }], isError: true };
-}
 function sendToolCall(paths, token, name, args, options) {
   return new Promise((resolve9, reject) => {
     const socket = connect(paths.socket);
@@ -5861,7 +5952,7 @@ function sendToolCall(paths, token, name, args, options) {
     };
     const timer = setTimeout(() => {
       sendCancel();
-      finish(() => reject(new DaemonRequestError("daemon request timed out", requestWritten)));
+      finish(() => reject(new DaemonRequestTimedOutError(requestWritten, options.timeoutMs)));
     }, options.timeoutMs);
     timer.unref();
     if (options.signal?.aborted) {
@@ -5919,9 +6010,6 @@ function allocateProxyRequestId() {
 }
 function isRetryableTool(name) {
   return name !== "rename" && name !== "lsp_rename";
-}
-function errorText(error) {
-  return error instanceof Error ? error.message : String(error);
 }
 
 // src/client.ts

@@ -2146,7 +2146,7 @@ var package_default;
 var init_package = __esm(() => {
   package_default = {
     name: "oh-my-opencode",
-    version: "4.19.0",
+    version: "4.19.1",
     description: "The Best AI Agent Harness - Batteries-Included OpenCode Plugin with Multi-Model Orchestration, Parallel Background Agents, and Crafted LSP/AST Tools",
     main: "./dist/index.js",
     types: "dist/index.d.ts",
@@ -2358,18 +2358,18 @@ var init_package = __esm(() => {
       typescript: "^6.0.3"
     },
     optionalDependencies: {
-      "oh-my-opencode-darwin-arm64": "4.19.0",
-      "oh-my-opencode-darwin-x64": "4.19.0",
-      "oh-my-opencode-darwin-x64-baseline": "4.19.0",
-      "oh-my-opencode-linux-arm64": "4.19.0",
-      "oh-my-opencode-linux-arm64-musl": "4.19.0",
-      "oh-my-opencode-linux-x64": "4.19.0",
-      "oh-my-opencode-linux-x64-baseline": "4.19.0",
-      "oh-my-opencode-linux-x64-musl": "4.19.0",
-      "oh-my-opencode-linux-x64-musl-baseline": "4.19.0",
-      "oh-my-opencode-windows-arm64": "4.19.0",
-      "oh-my-opencode-windows-x64": "4.19.0",
-      "oh-my-opencode-windows-x64-baseline": "4.19.0"
+      "oh-my-opencode-darwin-arm64": "4.19.1",
+      "oh-my-opencode-darwin-x64": "4.19.1",
+      "oh-my-opencode-darwin-x64-baseline": "4.19.1",
+      "oh-my-opencode-linux-arm64": "4.19.1",
+      "oh-my-opencode-linux-arm64-musl": "4.19.1",
+      "oh-my-opencode-linux-x64": "4.19.1",
+      "oh-my-opencode-linux-x64-baseline": "4.19.1",
+      "oh-my-opencode-linux-x64-musl": "4.19.1",
+      "oh-my-opencode-linux-x64-musl-baseline": "4.19.1",
+      "oh-my-opencode-windows-arm64": "4.19.1",
+      "oh-my-opencode-windows-x64": "4.19.1",
+      "oh-my-opencode-windows-x64-baseline": "4.19.1"
     },
     overrides: {
       "@earendil-works/pi-agent-core": "0.80.3",
@@ -7427,6 +7427,7 @@ var init_env = __esm(() => {
   SAFE_CODEGRAPH_RUNTIME_ENV_KEYS = new Set([
     "CODEGRAPH_ALLOW_UNSAFE_NODE",
     "CODEGRAPH_BIN",
+    "CODEGRAPH_DAEMON_IDLE_TIMEOUT_MS",
     "CODEGRAPH_FAKE_LOG",
     "CODEGRAPH_NO_DAEMON",
     "CODEGRAPH_NODE_BIN",
@@ -7441,6 +7442,9 @@ var init_workspace = () => {};
 
 // packages/utils/src/codegraph/guidance.ts
 var init_guidance = () => {};
+
+// packages/utils/src/codegraph/manifest.ts
+var init_manifest = () => {};
 
 // packages/utils/src/codegraph/node-support.ts
 function evaluateCodegraphNodeSupport(options = {}) {
@@ -7570,6 +7574,7 @@ var init_resolve2 = __esm(() => {
 var init_codegraph = __esm(() => {
   init_env();
   init_guidance();
+  init_manifest();
   init_provision();
   init_process_sweep();
   init_resolve2();
@@ -7748,7 +7753,7 @@ function migrateModelVersions(configs, appliedMigrations) {
 var MODEL_VERSION_MAP, CURRENT_USER_SELECTABLE_MODELS;
 var init_model_versions = __esm(() => {
   MODEL_VERSION_MAP = {
-    "anthropic/claude-opus-4-4": "anthropic/claude-opus-4-7"
+    "anthropic/claude-opus-4-4": "anthropic/claude-opus-4-8"
   };
   CURRENT_USER_SELECTABLE_MODELS = new Set([
     "anthropic/claude-opus-4-5",
@@ -9196,26 +9201,25 @@ var init_agent_model_requirements = __esm(() => {
       fallbackChain: [
         {
           providers: ["anthropic", "github-copilot", "opencode", "vercel"],
-          model: "claude-opus-4-7",
+          model: "claude-opus-4-8",
           variant: "max"
         },
-        { providers: ["opencode-go", "kimi-for-coding", "moonshotai", "opencode", "vercel"], model: "kimi-k3" },
-        { providers: ["opencode-go", "vercel"], model: "kimi-k2.6" },
-        { providers: ["kimi-for-coding"], model: "k2p5" },
         {
           providers: [
-            "opencode",
-            "bailian-coding-plan",
+            "opencode-go",
+            "kimi-for-coding",
             "moonshotai",
+            "opencode",
+            "vercel",
+            "bailian-coding-plan",
             "moonshotai-cn",
             "firmware",
             "ollama-cloud",
-            "aihubmix",
-            "vercel"
+            "aihubmix"
           ],
-          model: "kimi-k2.5"
+          model: "kimi-k3"
         },
-        { providers: ["openai", "github-copilot", "opencode", "vercel"], model: "gpt-5.5", variant: "medium" },
+        { providers: ["openai", "github-copilot", "opencode", "vercel"], model: "gpt-5.6-sol", variant: "medium" },
         { providers: ["zai-coding-plan", "opencode", "bailian-coding-plan", "vercel"], model: "glm-5" },
         { providers: ["opencode"], model: "big-pickle" }
       ],
@@ -9224,13 +9228,8 @@ var init_agent_model_requirements = __esm(() => {
     hephaestus: {
       fallbackChain: [
         {
-          providers: ["openai", "github-copilot", "vercel"],
+          providers: ["openai", "github-copilot", "vercel", "opencode"],
           model: "gpt-5.6-sol",
-          variant: "high"
-        },
-        {
-          providers: ["openai", "github-copilot", "opencode", "vercel"],
-          model: "gpt-5.5",
           variant: "medium"
         }
       ],
@@ -9240,8 +9239,13 @@ var init_agent_model_requirements = __esm(() => {
     oracle: {
       fallbackChain: [
         {
-          providers: ["openai", "github-copilot", "opencode", "vercel"],
-          model: "gpt-5.5",
+          providers: ["openai", "opencode", "vercel"],
+          model: "gpt-5.6-sol",
+          variant: "xhigh"
+        },
+        {
+          providers: ["github-copilot"],
+          model: "gpt-5.6-sol",
           variant: "high"
         },
         {
@@ -9251,7 +9255,7 @@ var init_agent_model_requirements = __esm(() => {
         },
         {
           providers: ["anthropic", "github-copilot", "opencode", "vercel"],
-          model: "claude-opus-4-7",
+          model: "claude-opus-4-8",
           variant: "max"
         },
         { providers: ["opencode-go", "vercel"], model: "glm-5.2" }
@@ -9283,8 +9287,8 @@ var init_agent_model_requirements = __esm(() => {
     },
     "multimodal-looker": {
       fallbackChain: [
-        { providers: ["openai", "opencode", "vercel"], model: "gpt-5.5", variant: "medium" },
-        { providers: ["opencode-go", "vercel"], model: "kimi-k2.6" },
+        { providers: ["openai", "opencode", "vercel"], model: "gpt-5.6-sol", variant: "low" },
+        { providers: ["opencode-go", "vercel"], model: "kimi-k3" },
         { providers: ["zai-coding-plan", "vercel"], model: "glm-4.6v" },
         { providers: ["openai", "github-copilot", "opencode", "vercel"], model: "gpt-5-nano" }
       ]
@@ -9293,12 +9297,12 @@ var init_agent_model_requirements = __esm(() => {
       fallbackChain: [
         {
           providers: ["anthropic", "github-copilot", "opencode", "vercel"],
-          model: "claude-opus-4-7",
+          model: "claude-opus-4-8",
           variant: "max"
         },
         {
           providers: ["openai", "github-copilot", "opencode", "vercel"],
-          model: "gpt-5.5",
+          model: "gpt-5.6-sol",
           variant: "high"
         },
         { providers: ["opencode-go", "vercel"], model: "glm-5.2" },
@@ -9316,16 +9320,16 @@ var init_agent_model_requirements = __esm(() => {
         },
         {
           providers: ["anthropic", "github-copilot", "opencode", "vercel"],
-          model: "claude-opus-4-7",
+          model: "claude-opus-4-8",
           variant: "max"
         },
         {
           providers: ["openai", "github-copilot", "opencode", "vercel"],
-          model: "gpt-5.5",
-          variant: "high"
+          model: "gpt-5.6-sol",
+          variant: "medium"
         },
         { providers: ["opencode-go", "vercel"], model: "glm-5.2" },
-        { providers: ["kimi-for-coding"], model: "k2p5" }
+        { providers: ["kimi-for-coding"], model: "kimi-k3" }
       ]
     },
     momus: {
@@ -9341,13 +9345,18 @@ var init_agent_model_requirements = __esm(() => {
           variant: "high"
         },
         {
-          providers: ["openai", "github-copilot", "opencode", "vercel"],
-          model: "gpt-5.5",
+          providers: ["openai", "opencode", "vercel"],
+          model: "gpt-5.6-sol",
           variant: "xhigh"
         },
         {
+          providers: ["github-copilot"],
+          model: "gpt-5.6-sol",
+          variant: "high"
+        },
+        {
           providers: ["anthropic", "github-copilot", "opencode", "vercel"],
-          model: "claude-opus-4-7",
+          model: "claude-opus-4-8",
           variant: "max"
         },
         {
@@ -9361,10 +9370,10 @@ var init_agent_model_requirements = __esm(() => {
     atlas: {
       fallbackChain: [
         { providers: ["anthropic", "github-copilot", "opencode", "vercel"], model: "claude-sonnet-4-6" },
-        { providers: ["opencode-go", "vercel"], model: "kimi-k2.6" },
+        { providers: ["opencode-go", "vercel"], model: "kimi-k3" },
         {
           providers: ["openai", "github-copilot", "opencode", "vercel"],
-          model: "gpt-5.5",
+          model: "gpt-5.6-sol",
           variant: "medium"
         },
         { providers: ["opencode-go", "vercel"], model: "minimax-m3" },
@@ -9375,10 +9384,10 @@ var init_agent_model_requirements = __esm(() => {
     "sisyphus-junior": {
       fallbackChain: [
         { providers: ["anthropic", "github-copilot", "opencode", "vercel"], model: "claude-sonnet-4-6" },
-        { providers: ["opencode-go", "vercel"], model: "kimi-k2.6" },
+        { providers: ["opencode-go", "vercel"], model: "kimi-k3" },
         {
           providers: ["openai", "github-copilot", "opencode", "vercel"],
-          model: "gpt-5.5",
+          model: "gpt-5.6-sol",
           variant: "medium"
         },
         { providers: ["opencode-go", "vercel"], model: "minimax-m3" },
@@ -9404,11 +9413,11 @@ var init_category_model_requirements = __esm(() => {
         { providers: ["zai-coding-plan", "opencode", "bailian-coding-plan", "vercel"], model: "glm-5" },
         {
           providers: ["anthropic", "github-copilot", "opencode", "vercel"],
-          model: "claude-opus-4-7",
+          model: "claude-opus-4-8",
           variant: "max"
         },
         { providers: ["opencode-go", "vercel"], model: "glm-5.2" },
-        { providers: ["kimi-for-coding"], model: "k2p5" }
+        { providers: ["kimi-for-coding"], model: "kimi-k3" }
       ]
     },
     ultrabrain: {
@@ -9425,7 +9434,7 @@ var init_category_model_requirements = __esm(() => {
         },
         {
           providers: ["openai", "opencode", "vercel"],
-          model: "gpt-5.5",
+          model: "gpt-5.6-sol",
           variant: "xhigh"
         },
         {
@@ -9435,7 +9444,7 @@ var init_category_model_requirements = __esm(() => {
         },
         {
           providers: ["anthropic", "github-copilot", "opencode", "vercel"],
-          model: "claude-opus-4-7",
+          model: "claude-opus-4-8",
           variant: "max"
         },
         { providers: ["opencode-go", "vercel"], model: "glm-5.2" }
@@ -9460,12 +9469,12 @@ var init_category_model_requirements = __esm(() => {
         },
         {
           providers: ["openai", "github-copilot", "opencode", "vercel"],
-          model: "gpt-5.5",
+          model: "gpt-5.6-sol",
           variant: "medium"
         },
         {
           providers: ["anthropic", "github-copilot", "opencode", "vercel"],
-          model: "claude-opus-4-7",
+          model: "claude-opus-4-8",
           variant: "max"
         },
         {
@@ -9473,7 +9482,7 @@ var init_category_model_requirements = __esm(() => {
           model: "gemini-3.1-pro",
           variant: "high"
         },
-        { providers: ["opencode-go", "vercel"], model: "kimi-k2.6" },
+        { providers: ["opencode-go", "vercel"], model: "kimi-k3" },
         { providers: ["opencode-go", "vercel"], model: "glm-5.2" }
       ]
     },
@@ -9486,11 +9495,11 @@ var init_category_model_requirements = __esm(() => {
         },
         {
           providers: ["anthropic", "github-copilot", "opencode", "vercel"],
-          model: "claude-opus-4-7",
+          model: "claude-opus-4-8",
           variant: "max"
         },
-        { providers: ["openai", "github-copilot", "opencode", "vercel"], model: "gpt-5.5" },
-        { providers: ["opencode-go", "vercel"], model: "kimi-k2.6" },
+        { providers: ["openai", "github-copilot", "opencode", "vercel"], model: "gpt-5.6-sol", variant: "high" },
+        { providers: ["opencode-go", "vercel"], model: "kimi-k3" },
         { providers: ["opencode-go", "vercel"], model: "glm-5.2" }
       ]
     },
@@ -9532,10 +9541,10 @@ var init_category_model_requirements = __esm(() => {
         },
         {
           providers: ["openai", "opencode", "vercel"],
-          model: "gpt-5.5",
+          model: "gpt-5.6-sol",
           variant: "medium"
         },
-        { providers: ["opencode-go", "vercel"], model: "kimi-k2.6" },
+        { providers: ["opencode-go", "vercel"], model: "kimi-k3" },
         {
           providers: ["google", "github-copilot", "opencode", "vercel"],
           model: "gemini-3-flash"
@@ -9549,30 +9558,29 @@ var init_category_model_requirements = __esm(() => {
       fallbackChain: [
         {
           providers: ["anthropic", "github-copilot", "opencode", "vercel"],
-          model: "claude-opus-4-7",
+          model: "claude-opus-4-8",
           variant: "max"
         },
         {
           providers: ["openai", "github-copilot", "opencode", "vercel"],
-          model: "gpt-5.5",
+          model: "gpt-5.6-sol",
           variant: "high"
         },
         { providers: ["zai-coding-plan", "opencode", "bailian-coding-plan", "vercel"], model: "glm-5" },
-        { providers: ["kimi-for-coding"], model: "k2p5" },
+        { providers: ["kimi-for-coding"], model: "kimi-k3" },
         { providers: ["opencode-go", "vercel"], model: "glm-5.2" },
-        { providers: ["opencode", "bailian-coding-plan", "vercel"], model: "kimi-k2.5" },
         {
           providers: [
             "opencode",
             "bailian-coding-plan",
+            "vercel",
             "moonshotai",
             "moonshotai-cn",
             "firmware",
             "ollama-cloud",
-            "aihubmix",
-            "vercel"
+            "aihubmix"
           ],
-          model: "kimi-k2.5"
+          model: "kimi-k3"
         }
       ]
     },
@@ -9582,7 +9590,7 @@ var init_category_model_requirements = __esm(() => {
           providers: ["google", "github-copilot", "opencode", "vercel"],
           model: "gemini-3-flash"
         },
-        { providers: ["opencode-go", "vercel"], model: "kimi-k2.6" },
+        { providers: ["opencode-go", "vercel"], model: "kimi-k3" },
         {
           providers: ["anthropic", "github-copilot", "opencode", "vercel"],
           model: "claude-sonnet-4-6"
@@ -10007,7 +10015,7 @@ var CLAUDE_VERSION_DOT, GEMINI_31_PRO_PREVIEW, GEMINI_3_FLASH_PREVIEW;
 var init_provider_model_id_transform = __esm(() => {
   CLAUDE_VERSION_DOT = /claude-(\w+)-(\d+)-(\d+)/g;
   GEMINI_31_PRO_PREVIEW = /gemini-3\.1-pro(?!-)/g;
-  GEMINI_3_FLASH_PREVIEW = /gemini-3-flash(?!-)/g;
+  GEMINI_3_FLASH_PREVIEW = /(?<!antigravity-)gemini-3-flash(?!-)/g;
 });
 
 // packages/model-core/src/known-variants.ts
@@ -10802,7 +10810,7 @@ var init_anthropic_categories = __esm(() => {
   ANTHROPIC_CATEGORIES = [
     {
       name: "unspecified-high",
-      config: { model: "anthropic/claude-opus-4-7", variant: "max" },
+      config: { model: "anthropic/claude-opus-4-8", variant: "max" },
       description: "Tasks that don't fit other categories, high effort required",
       promptAppend: UNSPECIFIED_HIGH_CATEGORY_PROMPT_APPEND
     }
@@ -10960,7 +10968,7 @@ var init_kimi_categories = __esm(() => {
   KIMI_CATEGORIES = [
     {
       name: "writing",
-      config: { model: "kimi-for-coding/k2p5" },
+      config: { model: "kimi-for-coding/kimi-k3" },
       description: "Documentation, prose, technical writing",
       promptAppend: WRITING_CATEGORY_PROMPT_APPEND
     }
@@ -65189,7 +65197,7 @@ var init_claude_model_mapper = __esm(() => {
   init_model_normalization2();
   CLAUDE_CODE_ALIAS_MAP = new Map([
     ["sonnet", `${ANTHROPIC_PREFIX}claude-sonnet-4-6`],
-    ["opus", `${ANTHROPIC_PREFIX}claude-opus-4-7`],
+    ["opus", `${ANTHROPIC_PREFIX}claude-opus-4-8`],
     ["haiku", `${ANTHROPIC_PREFIX}claude-haiku-4-5`]
   ]);
 });
@@ -65996,10 +66004,10 @@ var init_openai_only_model_catalog = __esm(() => {
     librarian: { model: "openai/gpt-5.4-mini-fast" }
   };
   OPENAI_ONLY_CATEGORY_OVERRIDES = {
-    artistry: { model: "openai/gpt-5.5", variant: "xhigh" },
+    artistry: { model: "openai/gpt-5.6-sol", variant: "xhigh" },
     quick: { model: "openai/gpt-5.4-mini" },
-    "visual-engineering": { model: "openai/gpt-5.5", variant: "high" },
-    writing: { model: "openai/gpt-5.5", variant: "medium" }
+    "visual-engineering": { model: "openai/gpt-5.6-sol", variant: "high" },
+    writing: { model: "openai/gpt-5.6-sol", variant: "medium" }
   };
 });
 
@@ -72713,7 +72721,7 @@ var package_default2;
 var init_package2 = __esm(() => {
   package_default2 = {
     name: "@oh-my-opencode/omo-codex",
-    version: "4.19.0",
+    version: "4.19.1",
     type: "module",
     private: true,
     description: "Codex harness adapter for oh-my-openagent. Vendored Codex plugin namespace (omo) + TypeScript installer + telemetry.",
@@ -75101,6 +75109,7 @@ async function rewriteCachedPackageLocalFileDependencies(pluginRoot, sourceRoot)
   const packageJsonPaths = [];
   await collectPackageJsonPaths(pluginRoot, pluginRoot, packageJsonPaths);
   const packageLock = await readPackageLock(pluginRoot);
+  let rewroteAnyPackageJson = false;
   for (const packageJsonPath of packageJsonPaths) {
     const raw = await readFile5(packageJsonPath, "utf8");
     const parsed = JSON.parse(raw);
@@ -75136,13 +75145,16 @@ async function rewriteCachedPackageLocalFileDependencies(pluginRoot, sourceRoot)
         changed = true;
       }
     }
-    if (changed)
+    if (changed) {
       await writeFile2(packageJsonPath, `${JSON.stringify(parsed, null, "\t")}
 `);
+      rewroteAnyPackageJson = true;
+    }
   }
   if (packageLock.changed)
     await writeFile2(packageLock.path, `${JSON.stringify(packageLock.value, null, "\t")}
 `);
+  return rewroteAnyPackageJson;
 }
 async function readPackageLock(pluginRoot) {
   const path7 = join30(pluginRoot, "package-lock.json");
@@ -75448,10 +75460,11 @@ async function installCachedPlugin(input) {
   await rm4(tempPath, { recursive: true, force: true });
   try {
     await copyDirectory(input.sourcePath, tempPath);
-    await rewriteCachedPackageLocalFileDependencies(tempPath, input.sourcePath);
+    const rewroteLocalFileDependencies = await rewriteCachedPackageLocalFileDependencies(tempPath, input.sourcePath);
     await copyBundledMcpRuntimeDists({ pluginRoot: tempPath, sourceRoot: input.sourcePath });
     await copyRootRuntimeDists({ pluginRoot: tempPath, sourcePath: input.sourcePath });
-    await maybeRunNpmInstall(tempPath, input.runCommand, npmInstallEnv, ["ci", "--omit=dev"]);
+    const installArgs = rewroteLocalFileDependencies ? ["install", "--omit=dev", "--no-audit", "--no-fund"] : ["ci", "--omit=dev"];
+    await maybeRunNpmInstall(tempPath, input.runCommand, npmInstallEnv, installArgs);
     await removeCachedManagedNpmBinShims(tempPath);
     if (input.buildSource === false)
       await maybeRunNpmSyncSkills(tempPath, input.runCommand, env2);
@@ -77139,11 +77152,11 @@ async function trustedHookStatesForPlugin(input) {
   const manifestPath = join40(input.pluginRoot, ".codex-plugin", "plugin.json");
   if (!await exists(manifestPath))
     return [];
-  const manifest = JSON.parse(await readFile12(manifestPath, "utf8"));
-  if (!isPlainRecord3(manifest))
+  const manifest2 = JSON.parse(await readFile12(manifestPath, "utf8"));
+  if (!isPlainRecord3(manifest2))
     return [];
   const states = [];
-  for (const hookPath of hookManifestPaths2(manifest.hooks)) {
+  for (const hookPath of hookManifestPaths2(manifest2.hooks)) {
     const hooksPath = join40(input.pluginRoot, hookPath);
     if (!await exists(hooksPath))
       continue;
@@ -77324,6 +77337,10 @@ var MANAGED_REASONING_DEFAULT_UPGRADES = new Map([
       {
         previous: { model: "gpt-5.6-sol", effort: "xhigh" },
         current: { model: "gpt-5.6-sol", effort: "max" }
+      },
+      {
+        previous: { model: "gpt-5.6-sol", effort: "max" },
+        current: { model: "gpt-5.6-sol", effort: "high" }
       }
     ]
   ],
@@ -77333,6 +77350,37 @@ var MANAGED_REASONING_DEFAULT_UPGRADES = new Map([
       {
         previous: { model: "gpt-5.6-sol", effort: "high" },
         current: { model: "gpt-5.6-luna", effort: "max" }
+      },
+      {
+        previous: { model: "gpt-5.6-luna", effort: "max" },
+        current: { model: "gpt-5.6-terra", effort: "high" }
+      }
+    ]
+  ],
+  [
+    "lazycodex-worker-high",
+    [
+      {
+        previous: { model: "gpt-5.6-sol", effort: "max" },
+        current: { model: "gpt-5.6-sol", effort: "medium" }
+      }
+    ]
+  ],
+  [
+    "lazycodex-code-reviewer",
+    [
+      {
+        previous: { model: "gpt-5.6-sol", effort: "xhigh" },
+        current: { model: "gpt-5.6-terra", effort: "medium" }
+      }
+    ]
+  ],
+  [
+    "lazycodex-clone-fidelity-reviewer",
+    [
+      {
+        previous: { model: "gpt-5.6-sol", effort: "xhigh" },
+        current: { model: "gpt-5.6-terra", effort: "high" }
       }
     ]
   ],
@@ -77351,6 +77399,10 @@ var MANAGED_REASONING_DEFAULT_UPGRADES = new Map([
       {
         previous: { model: "gpt-5.6-sol", effort: "xhigh" },
         current: { model: "gpt-5.6-sol", effort: "high" }
+      },
+      {
+        previous: { model: "gpt-5.6-sol", effort: "high" },
+        current: { model: "gpt-5.6-sol", effort: "low" }
       }
     ]
   ]
@@ -77977,7 +78029,7 @@ function normalizeHookStatusVersion(version) {
 
 // packages/omo-codex/src/install/codex-process.ts
 init_bun_spawn_shim();
-var WINDOWS_CMD_SHIM_COMMANDS = new Set(["npm", "npx"]);
+var WINDOWS_CMD_SHIM_COMMANDS = new Set(["codex", "npm", "npx"]);
 function resolveRunCommandInvocation(command, args, platform = process.platform) {
   if (platform !== "win32" || !WINDOWS_CMD_SHIM_COMMANDS.has(command.toLowerCase())) {
     return { command, args: [...args] };
@@ -78682,12 +78734,12 @@ async function runCodexInstaller(options = {}) {
   const agentConfigs = new Map;
   for (const entry of marketplace.plugins) {
     const sourcePath = resolvePluginSource(codexPackageRoot, entry, { pathOverride: "./plugin" });
-    const manifest = await readPluginManifest(sourcePath);
-    if (manifest.name !== entry.name) {
-      throw new Error(`plugin manifest name ${JSON.stringify(manifest.name)} does not match marketplace name ${JSON.stringify(entry.name)}`);
+    const manifest2 = await readPluginManifest(sourcePath);
+    if (manifest2.name !== entry.name) {
+      throw new Error(`plugin manifest name ${JSON.stringify(manifest2.name)} does not match marketplace name ${JSON.stringify(entry.name)}`);
     }
     const version2 = resolveLazyCodexPluginVersion({
-      manifestVersion: manifest.version,
+      manifestVersion: manifest2.version,
       marketplaceName: marketplace.name,
       pluginName: entry.name,
       distributionManifest,
@@ -97130,7 +97182,9 @@ var ClaudeCodeConfigSchema = exports_external.object({
 var CodegraphConfigSchema = exports_external.object({
   auto_init: exports_external.boolean().default(true),
   auto_provision: exports_external.boolean().default(true),
+  daemon: exports_external.boolean().default(false),
   enabled: exports_external.boolean().default(true),
+  excluded_roots: exports_external.array(exports_external.string()).optional(),
   install_dir: exports_external.string().optional(),
   telemetry: exports_external.boolean().optional(),
   watch_debounce_ms: exports_external.number().nonnegative().optional()
@@ -102115,10 +102169,10 @@ async function gatherCodexSummary(deps = {}) {
   const binDir = resolveCodexInstallerBinDir({ binDir: deps.binDir, codexHome, env: process.env });
   const detection = await (deps.detectCodexInstallation ?? detectCodexInstallation)();
   const pluginRoot = await resolveInstalledPluginRoot(codexHome);
-  const manifest = pluginRoot === null ? null : await readJson(join82(pluginRoot, ".codex-plugin", "plugin.json"));
+  const manifest2 = pluginRoot === null ? null : await readJson(join82(pluginRoot, ".codex-plugin", "plugin.json"));
   const installSnapshot = pluginRoot === null ? null : await readJson(join82(pluginRoot, "lazycodex-install.json"));
   const configPath = join82(codexHome, "config.toml");
-  const pluginVersion = stringField(manifest, "version");
+  const pluginVersion = stringField(manifest2, "version");
   return {
     codexPath: detection.found && "path" in detection ? detection.path : null,
     codexSource: detection.found ? detection.source : null,
@@ -102465,12 +102519,12 @@ async function auditBundleTargets(pluginRoot) {
   const broken = [];
   let referencedCount = 0;
   for (const manifestPath of await findManifestPaths(pluginRoot, ".mcp.json")) {
-    const manifest = await readJson2(manifestPath);
-    if (manifest === null || !isRecord6(manifest["mcpServers"]))
+    const manifest2 = await readJson2(manifestPath);
+    if (manifest2 === null || !isRecord6(manifest2["mcpServers"]))
       continue;
     const manifestRoot = dirname32(manifestPath);
     const isRootManifest = resolve23(manifestRoot) === resolve23(pluginRoot);
-    for (const server2 of Object.values(manifest["mcpServers"])) {
+    for (const server2 of Object.values(manifest2["mcpServers"])) {
       if (!isRecord6(server2) || !Array.isArray(server2["args"]))
         continue;
       for (const arg of server2["args"]) {
@@ -102484,11 +102538,11 @@ async function auditBundleTargets(pluginRoot) {
     }
   }
   for (const hookManifestPath of await findHookManifestPaths(pluginRoot)) {
-    const manifest = await readJson2(hookManifestPath);
-    if (manifest === null)
+    const manifest2 = await readJson2(hookManifestPath);
+    if (manifest2 === null)
       continue;
     const commands2 = [];
-    collectHookCommands(manifest, commands2);
+    collectHookCommands(manifest2, commands2);
     const hookPluginRoot = dirname32(dirname32(hookManifestPath));
     for (const command of commands2) {
       for (const relativePath of extractPluginRootPaths(command)) {

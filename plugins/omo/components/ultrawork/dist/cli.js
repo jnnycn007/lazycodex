@@ -60,7 +60,7 @@ function buildUltraworkAdditionalContext(options = {}) {
 }
 
 // components/ultrawork/src/codex-hook.ts
-var ULTRAWORK_CURRENT_PROMPT_PATTERN = /(?:ultrawork|ulw)/i;
+var ULTRAWORK_CURRENT_PROMPT_PATTERN = /(?:ultrawork|ulw(?!-(?:plan|research)))/i;
 var ULTRAWORK_DIRECTIVE_MARKER = "<ultrawork-mode>";
 var TRANSCRIPT_SEARCH_BYTES = 512000;
 var CONTEXT_PRESSURE_MARKERS = [

@@ -158,16 +158,35 @@ function bufferFromChunk(chunk) {
 
 // ../mcp-stdio-core/src/server.ts
 var DEFAULT_IDLE_TIMEOUT_MS = 10 * 60000;
+var DEFAULT_PARENT_POLL_INTERVAL_MS = 30000;
 var noopLog = () => {};
+function isProcessAlive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return !hasErrorCode(error, "ESRCH");
+  }
+}
 async function runJsonRpcStdioServer(config) {
   const log = config.log ?? noopLog;
   const idleTimeoutMs = config.idleTimeoutMs ?? DEFAULT_IDLE_TIMEOUT_MS;
-  const idleTimer = createIdleTimer(idleTimeoutMs, log, config.onIdleTimeout);
+  let isClosed = false;
+  const idleTimer = createIdleTimer(idleTimeoutMs, log, () => {
+    isClosed = true;
+    config.onIdleTimeout?.();
+  });
+  const watchdog = createParentWatchdog(config.parentWatchdog, (parentPid, pollIntervalMs) => {
+    isClosed = true;
+    log("parent_exit", { parent_pid: parentPid, poll_interval_ms: pollIntervalMs });
+    config.onParentExit?.();
+    config.input.destroy();
+  });
   log("stdio_started", { cwd: process.cwd(), idle_timeout_ms: idleTimeoutMs });
   idleTimer.arm();
   try {
     for await (const message of readStdioJsonRpcMessages(config.input)) {
-      if (idleTimer.closed())
+      if (isClosed)
         break;
       idleTimer.arm();
       if (message.kind === "parse_error") {
@@ -178,8 +197,12 @@ async function runJsonRpcStdioServer(config) {
       if (!await handleRequest(message, config, log))
         break;
     }
+  } catch (error) {
+    if (!(isClosed && hasErrorCode(error, "ERR_STREAM_PREMATURE_CLOSE")))
+      throw error;
   } finally {
     idleTimer.clear();
+    watchdog.clear();
     log("stdio_stopped");
   }
 }
@@ -235,9 +258,33 @@ function isTerminalOutputError(error) {
     return false;
   return error.code === "EPIPE" || error.code === "ERR_STREAM_DESTROYED" || error.code === "ERR_STREAM_WRITE_AFTER_END";
 }
-function createIdleTimer(idleTimeoutMs, log, onIdleTimeout) {
+function hasErrorCode(error, code) {
+  return error instanceof Error && "code" in error && error.code === code;
+}
+function createParentWatchdog(config, onDeadParent) {
+  if (config === undefined)
+    return { clear: () => {} };
+  const pollIntervalMs = config.pollIntervalMs ?? DEFAULT_PARENT_POLL_INTERVAL_MS;
+  if (pollIntervalMs <= 0)
+    return { clear: () => {} };
+  const parentPid = config.parentPid ?? process.ppid;
+  const probeAlive = config.probeAlive ?? isProcessAlive;
+  let fired = false;
+  const timer = setInterval(() => {
+    if (fired || probeAlive(parentPid))
+      return;
+    fired = true;
+    onDeadParent(parentPid, pollIntervalMs);
+  }, pollIntervalMs);
+  timer.unref();
+  return {
+    clear: () => {
+      clearInterval(timer);
+    }
+  };
+}
+function createIdleTimer(idleTimeoutMs, log, onTimeout) {
   let timer = null;
-  let isClosed = false;
   return {
     arm: () => {
       if (timer !== null)
@@ -245,9 +292,8 @@ function createIdleTimer(idleTimeoutMs, log, onIdleTimeout) {
       if (idleTimeoutMs <= 0)
         return;
       timer = setTimeout(() => {
-        isClosed = true;
         log("idle_timeout", { idle_timeout_ms: idleTimeoutMs });
-        onIdleTimeout?.();
+        onTimeout();
       }, idleTimeoutMs);
       timer.unref();
     },
@@ -256,8 +302,7 @@ function createIdleTimer(idleTimeoutMs, log, onIdleTimeout) {
         return;
       clearTimeout(timer);
       timer = null;
-    },
-    closed: () => isClosed
+    }
   };
 }
 // ../lsp-core/src/lsp/client-wrapper.ts
@@ -3058,8 +3103,13 @@ class LspClient extends LspClientConnection {
       if (!pushFallbackOnly)
         continue;
       const remainingMs = deadlineAt - Date.now();
-      if (remainingMs <= 0)
+      if (remainingMs <= 0) {
+        if (!this.isDiagnosticPullSupported() && snapshot.publishGeneration === 0) {
+          const cached = this.documents.getPullCache(snapshot);
+          return { items: cached === null ? [] : [...cached.diagnostics] };
+        }
         return this.freshnessTimeout(absPath);
+      }
       const waitMs = push.status === "wait" ? Math.min(push.waitMs, remainingMs) : remainingMs;
       await waitForDiagnosticsActivity(this.documents.waitForDiagnosticsActivity(snapshot, waitMs), signal);
     }
@@ -5026,12 +5076,13 @@ async function handleLspMcpRequest(input, options = {}) {
   }
   return errorResponse(id, -32601, `Method not found: ${String(method)}`);
 }
-async function runMcpStdioServer(input = process.stdin, output = process.stdout) {
+async function runMcpStdioServer(input = process.stdin, output = process.stdout, options = {}) {
   const requestContext = createStandaloneMcpRequestContext();
   await runJsonRpcStdioServer({
     input,
     output,
     idleTimeoutMs: 0,
+    parentWatchdog: options.parentWatchdog ?? {},
     handler: (request) => runWithRequestContext(requestContext, () => handleLspMcpRequest(request)),
     handlerOptions: undefined
   });

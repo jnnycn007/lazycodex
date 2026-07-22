@@ -1,4 +1,5 @@
 import type { Readable, Writable } from "node:stream";
+import { type ParentWatchdogConfig } from "@oh-my-opencode/mcp-stdio-core";
 import { type CallToolOptions, type DaemonToolContext } from "./daemon-client.js";
 import { type DaemonPaths } from "./paths.js";
 export interface ProxyOptions {
@@ -12,5 +13,6 @@ export interface ProxyOptions {
     homeDir?: string;
     ensure?: CallToolOptions["ensure"];
     startupTimeoutMs?: number;
+    parentWatchdog?: ParentWatchdogConfig;
 }
 export declare function runMcpStdioProxy(options?: ProxyOptions): Promise<void>;

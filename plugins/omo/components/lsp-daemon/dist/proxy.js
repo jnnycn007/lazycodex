@@ -59,6 +59,7 @@ export async function runMcpStdioProxy(options = {}) {
             input,
             output,
             idleTimeoutMs: 0,
+            parentWatchdog: options.parentWatchdog ?? {},
             handler: (request, requestOptions) => {
                 clearStartupWatchdog();
                 return runWithRequestContext(context, () => handleProxyRequest(request, requestOptions));

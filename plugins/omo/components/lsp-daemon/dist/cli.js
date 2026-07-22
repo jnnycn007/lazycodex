@@ -167,16 +167,35 @@ function bufferFromChunk(chunk) {
 
 // ../mcp-stdio-core/src/server.ts
 var DEFAULT_IDLE_TIMEOUT_MS = 10 * 60000;
+var DEFAULT_PARENT_POLL_INTERVAL_MS = 30000;
 var noopLog = () => {};
+function isProcessAlive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return !hasErrorCode(error, "ESRCH");
+  }
+}
 async function runJsonRpcStdioServer(config) {
   const log = config.log ?? noopLog;
   const idleTimeoutMs = config.idleTimeoutMs ?? DEFAULT_IDLE_TIMEOUT_MS;
-  const idleTimer = createIdleTimer(idleTimeoutMs, log, config.onIdleTimeout);
+  let isClosed = false;
+  const idleTimer = createIdleTimer(idleTimeoutMs, log, () => {
+    isClosed = true;
+    config.onIdleTimeout?.();
+  });
+  const watchdog = createParentWatchdog(config.parentWatchdog, (parentPid, pollIntervalMs) => {
+    isClosed = true;
+    log("parent_exit", { parent_pid: parentPid, poll_interval_ms: pollIntervalMs });
+    config.onParentExit?.();
+    config.input.destroy();
+  });
   log("stdio_started", { cwd: process.cwd(), idle_timeout_ms: idleTimeoutMs });
   idleTimer.arm();
   try {
     for await (const message of readStdioJsonRpcMessages(config.input)) {
-      if (idleTimer.closed())
+      if (isClosed)
         break;
       idleTimer.arm();
       if (message.kind === "parse_error") {
@@ -187,8 +206,12 @@ async function runJsonRpcStdioServer(config) {
       if (!await handleRequest(message, config, log))
         break;
     }
+  } catch (error) {
+    if (!(isClosed && hasErrorCode(error, "ERR_STREAM_PREMATURE_CLOSE")))
+      throw error;
   } finally {
     idleTimer.clear();
+    watchdog.clear();
     log("stdio_stopped");
   }
 }
@@ -244,9 +267,33 @@ function isTerminalOutputError(error) {
     return false;
   return error.code === "EPIPE" || error.code === "ERR_STREAM_DESTROYED" || error.code === "ERR_STREAM_WRITE_AFTER_END";
 }
-function createIdleTimer(idleTimeoutMs, log, onIdleTimeout) {
+function hasErrorCode(error, code) {
+  return error instanceof Error && "code" in error && error.code === code;
+}
+function createParentWatchdog(config, onDeadParent) {
+  if (config === undefined)
+    return { clear: () => {} };
+  const pollIntervalMs = config.pollIntervalMs ?? DEFAULT_PARENT_POLL_INTERVAL_MS;
+  if (pollIntervalMs <= 0)
+    return { clear: () => {} };
+  const parentPid = config.parentPid ?? process.ppid;
+  const probeAlive = config.probeAlive ?? isProcessAlive;
+  let fired = false;
+  const timer = setInterval(() => {
+    if (fired || probeAlive(parentPid))
+      return;
+    fired = true;
+    onDeadParent(parentPid, pollIntervalMs);
+  }, pollIntervalMs);
+  timer.unref();
+  return {
+    clear: () => {
+      clearInterval(timer);
+    }
+  };
+}
+function createIdleTimer(idleTimeoutMs, log, onTimeout) {
   let timer = null;
-  let isClosed = false;
   return {
     arm: () => {
       if (timer !== null)
@@ -254,9 +301,8 @@ function createIdleTimer(idleTimeoutMs, log, onIdleTimeout) {
       if (idleTimeoutMs <= 0)
         return;
       timer = setTimeout(() => {
-        isClosed = true;
         log("idle_timeout", { idle_timeout_ms: idleTimeoutMs });
-        onIdleTimeout?.();
+        onTimeout();
       }, idleTimeoutMs);
       timer.unref();
     },
@@ -265,8 +311,7 @@ function createIdleTimer(idleTimeoutMs, log, onIdleTimeout) {
         return;
       clearTimeout(timer);
       timer = null;
-    },
-    closed: () => isClosed
+    }
   };
 }
 // ../lsp-core/src/lsp/client-wrapper.ts
@@ -3057,8 +3102,13 @@ class LspClient extends LspClientConnection {
       if (!pushFallbackOnly)
         continue;
       const remainingMs = deadlineAt - Date.now();
-      if (remainingMs <= 0)
+      if (remainingMs <= 0) {
+        if (!this.isDiagnosticPullSupported() && snapshot.publishGeneration === 0) {
+          const cached = this.documents.getPullCache(snapshot);
+          return { items: cached === null ? [] : [...cached.diagnostics] };
+        }
         return this.freshnessTimeout(absPath);
+      }
       const waitMs = push.status === "wait" ? Math.min(push.waitMs, remainingMs) : remainingMs;
       await waitForDiagnosticsActivity(this.documents.waitForDiagnosticsActivity(snapshot, waitMs), signal);
     }
@@ -5065,6 +5115,81 @@ import { connect } from "node:net";
 import { homedir as homedir3 } from "node:os";
 import { join as join7 } from "node:path";
 
+// src/daemon-request-error.ts
+class DaemonRequestError extends Error {
+  requestWritten;
+  constructor(message, requestWritten) {
+    super(message);
+    this.name = "DaemonRequestError";
+    this.requestWritten = requestWritten;
+  }
+}
+
+class DaemonAuthenticationRejectedError extends DaemonRequestError {
+  constructor() {
+    super("daemon authentication failed before dispatch", true);
+    this.name = "DaemonAuthenticationRejectedError";
+  }
+}
+
+class DaemonRequestCancelledError extends DaemonRequestError {
+  constructor(requestWritten) {
+    super("daemon request cancelled", requestWritten);
+    this.name = "DaemonRequestCancelledError";
+  }
+}
+
+class DaemonRequestTimedOutError extends DaemonRequestError {
+  timeoutMs;
+  constructor(requestWritten, timeoutMs) {
+    super("daemon request timed out", requestWritten);
+    this.name = "DaemonRequestTimedOutError";
+    this.timeoutMs = timeoutMs;
+  }
+}
+
+// src/daemon-failure-result.ts
+function daemonFailureResult(paths, error) {
+  if (error instanceof DaemonRequestCancelledError)
+    return daemonCancelledResult(paths);
+  if (error instanceof DaemonRequestTimedOutError)
+    return daemonTimedOutResult(paths, error.timeoutMs);
+  return daemonUnreachableResult(paths, error);
+}
+function daemonCancelledResult(paths) {
+  const text2 = [
+    "LSP daemon request cancelled: the caller aborted this request (for example, the turn was interrupted).",
+    "The daemon stays available; no LSP work was applied. Retry when you are ready.",
+    `Socket: ${paths.socket}`
+  ].join(`
+`);
+  return { content: [{ type: "text", text: text2 }], isError: true };
+}
+function daemonTimedOutResult(paths, timeoutMs) {
+  const text2 = [
+    `LSP daemon request timed out after ${timeoutMs}ms: the daemon did not respond in time.`,
+    "The daemon stays available but may be busy. Retry when you are ready.",
+    `Socket: ${paths.socket}`,
+    `Logs: ${paths.log}`
+  ].join(`
+`);
+  return { content: [{ type: "text", text: text2 }], isError: true };
+}
+function daemonUnreachableResult(paths, error) {
+  const text2 = [
+    `LSP daemon unreachable: ${errorText(error)}.`,
+    "The MCP server is a thin proxy and never runs language servers in-process.",
+    `Socket: ${paths.socket}`,
+    `Logs: ${paths.log}`,
+    "The daemon is auto-started on demand and will be retried on the next request."
+  ].join(`
+`);
+  return { content: [{ type: "text", text: text2 }], isError: true };
+}
+function errorText(error) {
+  return error instanceof Error ? error.message : String(error);
+}
+
 // src/ensure-daemon.ts
 import { spawn as spawn2 } from "node:child_process";
 import { closeSync as closeSync2, mkdirSync as mkdirSync3, openSync as openSync2 } from "node:fs";
@@ -5724,29 +5849,6 @@ function parseContext(value) {
 // src/daemon-client.ts
 var DEFAULT_REQUEST_TIMEOUT_MS = 30000;
 var nextProxyRequestId = 1;
-
-class DaemonRequestError extends Error {
-  requestWritten;
-  constructor(message, requestWritten) {
-    super(message);
-    this.name = "DaemonRequestError";
-    this.requestWritten = requestWritten;
-  }
-}
-
-class DaemonAuthenticationRejectedError extends DaemonRequestError {
-  constructor() {
-    super("daemon authentication failed before dispatch", true);
-    this.name = "DaemonAuthenticationRejectedError";
-  }
-}
-
-class DaemonRequestCancelledError extends DaemonRequestError {
-  constructor(requestWritten) {
-    super("daemon request cancelled", requestWritten);
-    this.name = "DaemonRequestCancelledError";
-  }
-}
 async function callToolViaDaemon(name, args, options) {
   const context = requireContext(options.context);
   const paths = options.paths ?? daemonPaths();
@@ -5775,7 +5877,7 @@ async function callToolViaDaemon(name, args, options) {
         break;
     }
   }
-  return daemonUnreachableResult(paths, lastError);
+  return daemonFailureResult(paths, lastError);
 }
 function callDiagnosticsViaDaemon(filePath, options) {
   return callToolViaDaemon("diagnostics", { filePath, severity: "error" }, options);
@@ -5820,17 +5922,6 @@ function ensureDaemonAvailable(paths, ensure, signal) {
     Promise.resolve().then(() => ensure(paths, signal)).then(() => finish(() => resolve9()), (error) => finish(() => reject(signal.aborted ? new DaemonRequestCancelledError(false) : error)));
   });
 }
-function daemonUnreachableResult(paths, error) {
-  const text2 = [
-    `LSP daemon unreachable: ${errorText(error)}.`,
-    "The MCP server is a thin proxy and never runs language servers in-process.",
-    `Socket: ${paths.socket}`,
-    `Logs: ${paths.log}`,
-    "The daemon is auto-started on demand and will be retried on the next request."
-  ].join(`
-`);
-  return { content: [{ type: "text", text: text2 }], isError: true };
-}
 function sendToolCall(paths, token, name, args, options) {
   return new Promise((resolve9, reject) => {
     const socket = connect(paths.socket);
@@ -5870,7 +5961,7 @@ function sendToolCall(paths, token, name, args, options) {
     };
     const timer = setTimeout(() => {
       sendCancel();
-      finish(() => reject(new DaemonRequestError("daemon request timed out", requestWritten)));
+      finish(() => reject(new DaemonRequestTimedOutError(requestWritten, options.timeoutMs)));
     }, options.timeoutMs);
     timer.unref();
     if (options.signal?.aborted) {
@@ -5929,9 +6020,6 @@ function allocateProxyRequestId() {
 function isRetryableTool(name) {
   return name !== "rename" && name !== "lsp_rename";
 }
-function errorText(error) {
-  return error instanceof Error ? error.message : String(error);
-}
 
 // src/proxy.ts
 var DEFAULT_STARTUP_TIMEOUT_MS = 1e4;
@@ -5988,6 +6076,7 @@ async function runMcpStdioProxy(options = {}) {
       input,
       output,
       idleTimeoutMs: 0,
+      parentWatchdog: options.parentWatchdog ?? {},
       handler: (request, requestOptions) => {
         clearStartupWatchdog();
         return runWithRequestContext(context, () => handleProxyRequest(request, requestOptions));
@@ -6081,7 +6170,7 @@ import { dirname as dirname11 } from "node:path";
 // src/lock.ts
 import { closeSync as closeSync3, mkdirSync as mkdirSync4, openSync as openSync3, readFileSync as readFileSync6, unlinkSync as unlinkSync2, writeSync as writeSync2 } from "node:fs";
 import { dirname as dirname10 } from "node:path";
-function isProcessAlive(pid) {
+function isProcessAlive2(pid) {
   if (!Number.isInteger(pid) || pid <= 0)
     return false;
   try {
@@ -6127,7 +6216,7 @@ function writeLockFile(lockPath, ownerPid) {
 }
 function reapStaleLock(lockPath) {
   const pid = readLockPid(lockPath);
-  if (pid !== null && isProcessAlive(pid))
+  if (pid !== null && isProcessAlive2(pid))
     return false;
   unlinkQuietly(lockPath);
   return true;
@@ -6249,7 +6338,7 @@ async function validateExistingOwner(paths, pingOwner) {
     }
     if (ping)
       continue;
-    if (isProcessAlive(owner.pid))
+    if (isProcessAlive2(owner.pid))
       throw new DaemonStartupDeferredError("owner_pid_live_unreachable");
     const reread = readDaemonOwner(paths);
     const endpoint = endpointIdentity(owner.endpoint.path);
@@ -6311,6 +6400,184 @@ function parseEndpoint(value) {
   return null;
 }
 
+// src/version-reap.ts
+import { execFile } from "node:child_process";
+import { readdir, readFile, rm } from "node:fs/promises";
+import { basename as basename4, dirname as dirname12, join as join8 } from "node:path";
+var TERM_GRACE_MS = 5000;
+var KILL_GRACE_MS = 1000;
+var VERSION_ENTRY_PATTERN = /^v([A-Za-z0-9][A-Za-z0-9._+-]{0,127})$/;
+async function attestDaemonCliProcess(pid, platform, deps = {}) {
+  if (platform === "win32")
+    return false;
+  if (platform === "linux") {
+    const readProcFile = deps.readProcFile ?? defaultReadProcFile;
+    const cmdline = await readProcFile(`/proc/${pid}/cmdline`).catch(() => null);
+    if (cmdline === null)
+      return false;
+    return isNodeCliDaemonArgv(splitCmdline(cmdline));
+  }
+  const executeForStdout = deps.executeForStdout ?? defaultExecuteForStdout;
+  const command = await executeForStdout("/bin/ps", ["-p", String(pid), "-o", "command="]);
+  if (command === null)
+    return false;
+  return isNodeCliDaemonCommand(command.trim());
+}
+async function reapStaleDaemonVersions(ownPaths, deps = {}) {
+  const baseDir = dirname12(ownPaths.dir);
+  const platform = deps.platform ?? process.platform;
+  const isAlive = deps.isAlive ?? isProcessAlive2;
+  const attest = deps.attest ?? ((pid) => attestDaemonCliProcess(pid, platform));
+  const sendSignal = deps.sendSignal ?? defaultSendSignal;
+  const waitForExit = deps.waitForExit ?? defaultWaitForExit;
+  const removeDir = deps.removeDir ?? ((path2) => rm(path2, { recursive: true, force: true }));
+  const readOwner = deps.readOwner ?? readDaemonOwner;
+  const log = deps.log ?? defaultLog;
+  const termGraceMs = deps.termGraceMs ?? TERM_GRACE_MS;
+  const killGraceMs = deps.killGraceMs ?? KILL_GRACE_MS;
+  const entries = await readdir(baseDir, { withFileTypes: true }).catch(() => []);
+  const results = [];
+  for (const entry of [...entries].sort((left, right) => left.name.localeCompare(right.name))) {
+    if (entry.name === `v${ownPaths.version}`)
+      continue;
+    const version = parseVersionEntry(entry.name);
+    if (version === null || !entry.isDirectory())
+      continue;
+    const versionDir = join8(baseDir, entry.name);
+    const siblingPaths = daemonPaths({ [OMO_LSP_DAEMON_DIR]: baseDir }, { cliPath: ownPaths.cliPath, version });
+    results.push(await reapOneVersion({
+      version,
+      versionDir,
+      siblingPaths,
+      platform,
+      isAlive,
+      attest,
+      sendSignal,
+      waitForExit,
+      removeDir,
+      readOwner,
+      log,
+      termGraceMs,
+      killGraceMs
+    }));
+  }
+  return results;
+}
+async function reapOneVersion(context) {
+  const { version, versionDir } = context;
+  const owner = context.readOwner(context.siblingPaths);
+  if (!owner) {
+    const lockPid = readLockPid(join8(versionDir, "daemon.lock"));
+    if (lockPid !== null && context.isAlive(lockPid)) {
+      context.log(`reap: sparing v${version}: owner metadata missing but daemon.lock is held by live pid ${lockPid}`);
+      return { version, status: "spared", reason: `owner metadata missing but lock held by live pid ${lockPid}` };
+    }
+    await context.removeDir(versionDir);
+    return { version, status: "removed", reason: "removed stale version dir without readable owner metadata" };
+  }
+  if (!context.isAlive(owner.pid)) {
+    await context.removeDir(versionDir);
+    return { version, status: "removed", reason: `removed stale version dir for dead owner pid ${owner.pid}` };
+  }
+  if (context.platform === "win32") {
+    context.log(`reap: deferring v${version}: Windows cannot prove pid ownership safely (named-pipe policy)`);
+    return {
+      version,
+      status: "deferred",
+      reason: "Windows cannot prove pid ownership safely; named-pipe reap deferred"
+    };
+  }
+  if (!await context.attest(owner.pid, context.platform)) {
+    context.log(`reap: sparing v${version}: pid ${owner.pid} is alive but cmdline attestation failed (possible recycled pid)`);
+    return {
+      version,
+      status: "spared",
+      reason: `pid ${owner.pid} attestation failed; possible recycled pid`
+    };
+  }
+  return await terminateAttestedOwner(context, owner.pid);
+}
+async function terminateAttestedOwner(context, pid) {
+  const { version, versionDir } = context;
+  if (!context.sendSignal(pid, "SIGTERM")) {
+    await context.removeDir(versionDir);
+    return {
+      version,
+      status: "removed",
+      reason: `owner pid ${pid} exited before SIGTERM; removed stale version dir`
+    };
+  }
+  if (await context.waitForExit(pid, context.termGraceMs)) {
+    await context.removeDir(versionDir);
+    return { version, status: "terminated", reason: `terminated attested older daemon pid ${pid} with SIGTERM` };
+  }
+  context.log(`reap: v${version} pid ${pid} survived SIGTERM; escalating to SIGKILL`);
+  if (!context.sendSignal(pid, "SIGKILL") || !await context.waitForExit(pid, context.killGraceMs)) {
+    context.log(`reap: deferring v${version}: pid ${pid} survived SIGKILL`);
+    return { version, status: "deferred", reason: `attested daemon pid ${pid} survived SIGKILL; dir kept` };
+  }
+  await context.removeDir(versionDir);
+  return {
+    version,
+    status: "terminated",
+    reason: `terminated attested older daemon pid ${pid} after SIGKILL escalation`
+  };
+}
+function parseVersionEntry(entryName) {
+  const match = VERSION_ENTRY_PATTERN.exec(entryName);
+  return match?.[1] ?? null;
+}
+function splitCmdline(buffer) {
+  return buffer.toString("utf8").split("\x00").filter((value) => value.length > 0);
+}
+function isNodeCliDaemonArgv(argv) {
+  if (argv.length < 2 || !argv.includes("daemon"))
+    return false;
+  const executable = basename4(argv[0] ?? "");
+  if (!/^node(?:\.exe)?$/i.test(executable))
+    return false;
+  return argv.some((value) => value === "cli.js" || value.endsWith("/cli.js") || value.endsWith("\\cli.js"));
+}
+function isNodeCliDaemonCommand(command) {
+  return /\bnode(?:\.exe)?\b/i.test(command) && /\bcli\.js\b/.test(command) && /\bdaemon\b/.test(command);
+}
+function defaultReadProcFile(path2) {
+  return readFile(path2);
+}
+function defaultExecuteForStdout(file, args) {
+  return new Promise((resolve9) => {
+    execFile(file, [...args], { encoding: "utf8", maxBuffer: 1024 * 1024, timeout: 1000 }, (error, stdout) => {
+      if (error !== null) {
+        resolve9(null);
+        return;
+      }
+      resolve9(stdout);
+    });
+  });
+}
+function defaultSendSignal(pid, signal) {
+  try {
+    process.kill(pid, signal);
+    return true;
+  } catch {
+    return false;
+  }
+}
+async function defaultWaitForExit(pid, timeoutMs) {
+  const deadline = Date.now() + timeoutMs;
+  for (;; ) {
+    if (!isProcessAlive2(pid))
+      return true;
+    if (Date.now() >= deadline)
+      return false;
+    await new Promise((resolve9) => setTimeout(resolve9, 100));
+  }
+}
+function defaultLog(message) {
+  process.stderr.write(`[lsp-daemon] ${message}
+`);
+}
+
 // src/daemon-server.ts
 var DEFAULT_IDLE_SHUTDOWN_MS = 30 * 60000;
 var DEFAULT_IDLE_CHECK_INTERVAL_MS = 60000;
@@ -6357,6 +6624,7 @@ async function startDaemonServer(paths, options = {}) {
     throw error;
   }
   lease.lock.release();
+  reapStaleDaemonVersions(paths).catch((error) => logServerError(error));
   let closed = false;
   const close = async () => {
     if (closed)

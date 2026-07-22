@@ -2613,8 +2613,13 @@ class LspClient extends LspClientConnection {
       if (!pushFallbackOnly)
         continue;
       const remainingMs = deadlineAt - Date.now();
-      if (remainingMs <= 0)
+      if (remainingMs <= 0) {
+        if (!this.isDiagnosticPullSupported() && snapshot.publishGeneration === 0) {
+          const cached = this.documents.getPullCache(snapshot);
+          return { items: cached === null ? [] : [...cached.diagnostics] };
+        }
         return this.freshnessTimeout(absPath);
+      }
       const waitMs = push.status === "wait" ? Math.min(push.waitMs, remainingMs) : remainingMs;
       await waitForDiagnosticsActivity(this.documents.waitForDiagnosticsActivity(snapshot, waitMs), signal);
     }
